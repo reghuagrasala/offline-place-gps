@@ -1,86 +1,46 @@
-# Your Place Data - Offline GPS PWA v12.3
+# Your Place Data - Offline GPS PWA v12.4 Scroll Fixed
 
-**100% Offline GPS + DIGIPIN + Sky Events - No API cost**
+**Fixes Ulaa scroll lock + Safari old cache**
 
 Live: https://offline-place-gps.pages.dev/
 
-### What's New in v12.3 (Separate Files Build)
-- **Architecture:** Switched back to separate files (`index.html`, `manifest.json`, `sw.js`) for proper GitHub deployment
-- **Version Badge:** Visible `v12.3 SEPARATE-FILES` in header to verify deployment
-- **Mobile Fixed:**
-  - Viewport: `width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover`
-  - iOS: `apple-mobile-web-app-capable=yes`, `black-translucent`, safe-area insets
-  - No sideways scroll, no pinch-zoom (`touch-action: manipulation`, `overscroll-behavior: none`)
-- **Layout:** 2-column grid (gap 8px, padding 6px) - back to 2-col as requested
-- **Metric Tabs:** 
-  - TIME ZONE & MOON DIST same height as other tabs (110-120px), full-width `grid-column: 1/-1` filling empty right space
-  - All tabs glassy ambience, rounded 18px, same size
-- **Fonts:**
-  - Yellow results: **Wider** 21px `scaleX 1.02 scaleY 1.05` weight 600 letter-spacing 0.3px for viewing pleasure, auto-fill 2-3 lines, no shrink/overlap
-  - Tiny fonts (inside & outside tabs): **Bright white** `#FFFFFF` opacity 1 weight 600-700 + glow shadow for readability
-- **Blink:** Default ON after 10s, yellow results blink, controls hidden (no `ON | Blink OFF | Update:2s` bar)
-- **Sky:** 24h sky background, sky events horizontal auto-scroll every 60s, heading compass centered N badge, dark sky blue moon/stars thumbnail 600x600
-- **Offline:** Service Worker `place-data-v12-3-separate` with `skipWaiting()` + `clients.claim()` + auto-delete old caches + version check
+### What's Fixed in v12.4
+
+**Ulaa Browser PWA - Cannot Scroll Down (FIXED):**
+- Root cause: `touch-action: manipulation` + `overscroll-behavior: none` + `max-height: 100dvh` locked scroll in standalone PWA
+- Fix: Changed to `touch-action: pan-y`, `overscroll-behavior-y: auto`, `overflow-y: auto`, `-webkit-overflow-scrolling: touch`, removed fixed height traps
+- Added `<style id="scroll-fix-v12-4">` override that forces html/body/#root to be scrollable
+
+**Safari Add to Home Screen Shows Old Version (FIXED):**
+- Root cause: Safari PWA keeps old cache `place-data-v7-final-locked` and old `index.html` separate from Safari browser cache. Network-first for navigation requests now.
+- Fix: SW v12.4 cache `place-data-v12-4-scroll-fixed` deletes ALL old caches on activate, forces `clients.claim()` + reload, network-first for `index.html` and navigations
+- Added version check: `localStorage pwa_version` + auto clear + reload
+
+### Verification
+- Header badge must show **v12.4 SCROLL-FIXED**
+- Bottom should NOT show old `ON | Blink OFF | Update:2s` bar - only yellow blinks every 10s
+- Ulaa PWA: Can scroll down to see all 9 tabs + sky events + moon
+- Safari PWA: After delete + reinstall, shows v12.4 not old
 
 ### Files
-```
-/
-├── index.html       # Main PWA (single page app)
-├── manifest.json    # PWA manifest (standalone, portrait)
-├── sw.js            # Service Worker (offline cache)
-├── README.md        # This file
-├── icon-192.png     # Optional - add your icon
-└── icon-512.png     # Optional - add your icon
-```
+- `index.html` - 261KB - main app
+- `manifest.json` - PWA manifest
+- `sw.js` - SW v12.4
+- `README.md` - this file
+- `icon-192.png`, `icon-512.png`
 
-### GitHub Deployment (Cloudflare Pages)
+### Deploy
+1. Upload all 6 files to GitHub main root
+2. Cloudflare Pages - wait green Success
+3. Test:
+   - Laptop: `https://offline-place-gps.pages.dev/?v=124`
+   - Ulaa: Delete PWA > Open `?v=124` > Add to Home Screen > Should scroll
+   - Safari: Delete PWA > Settings > Safari > Advanced > Website Data > Delete pages.dev > Open `?v=124` > Add to Home Screen > Should show v12.4
 
-1. **Repo Structure:** Upload **all 4 files** to `main` branch root:
-   - `index.html`
-   - `manifest.json`
-   - `sw.js`
-   - `README.md`
+### Previous Fixes Kept
+- 2-col layout gap 8px, TIME ZONE/MOON DIST full-width same height grid-column 1/-1
+- Yellow results wider 21px scaleX 1.02 scaleY 1.05
+- Tiny fonts bright white #FFFFFF
+- Title bar +18px, glassy, 24h sky, sky events 60s horizontal, heading compass N badge
 
-2. **Cloudflare Pages:**
-   - Dashboard > Pages > Create project > Connect GitHub repo `offline-place-gps`
-   - Build settings: Framework preset = **None**, Build command = empty, Output directory = `/` (root)
-   - Deploy - Wait for green Success
-
-3. **Verify Deployment:**
-   - Open `https://offline-place-gps.pages.dev/?v=123` 
-   - Check header shows **v12.3 SEPARATE-FILES**
-   - Check bottom - should **NOT** show old `ON | Blink OFF | Update:2s` bar
-
-### Mobile Fix (If Old Version Still Shows)
-
-**iPhone:**
-1. Delete PWA from home screen
-2. Safari > open `https://offline-place-gps.pages.dev/?v=123`
-3. If still old: Settings > Apps > Safari > Advanced > Website Data > Search `pages.dev` > Delete All
-4. Reload `?v=123` - should show v12.3 badge
-5. Add to Home Screen
-
-**Android:**
-Chrome > open site > 3 dots > ⓘ Info > **Clear & Reset** > Reload `?v=123`
-
-**Why?** Old SW `place-data-v7-final-locked` cached old HTML. v12.3 SW auto-deletes all old caches on install.
-
-### Features
-- 9 Metric Tabs: Latitude, Longitude, Elevation, Heading, Accuracy, Speed, Date, Time, Time Zone, Sun/Moon events, Moon Phase
-- 100% Offline - No GPS API cost, no network needed after install
-- DIGIPIN Compatible
-- 24H Sky Animation
-- Glassmorphism UI
-- PWA Installable
-
-### Tech Stack
-- Vanilla HTML/CSS/JS (no framework)
-- Tailwind CSS (inline)
-- Service Worker Cache API
-- Geolocation API, SunCalc
-
-### License
-MIT - Free for personal use
-
----
-**Build:** v12.3 Separate Files | 2026-05-13 | Bright White Tiny Fonts | Wider Yellow 21px | Mobile-Fixed
+Build: v12.4 Scroll Fixed | 2026-05-13

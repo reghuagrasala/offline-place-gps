@@ -1,8 +1,8 @@
 {
-  "name": "Your Place Data - Offline GPS v12.3",
+  "name": "Your Place Data - Offline GPS v12.4 Scroll Fixed",
   "short_name": "PlaceData",
-  "description": "100% Offline GPS, DIGIPIN, Sky Events - 2-col, bright white tiny fonts, wider yellows, no API cost - v12.3",
-  "start_url": "./?utm_source=pwa&v=123",
+  "description": "100% Offline GPS v12.4 - Scroll fixed for PWA, bright white fonts, wider yellows",
+  "start_url": "./?utm_source=pwa&v=124",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#020617",
