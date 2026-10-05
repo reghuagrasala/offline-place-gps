@@ -1,25 +1,43 @@
-# v12.9 STABLE LAYOUT - Fix Top Blank + Bottom Strip
+# v13.9 STATIC GLOBE - Why globe rotating? Fix
 
-### Issues from screenshots v12.8:
-1. **Top blank space:** Large dark navy/black area above pink sky gradient (image_7BCBA195)
-   - Cause: `env(safe-area-inset-top)` + body background #020617 + sky padding calc = double padding, sky gradient starts below status bar
-   - Fix: Removed ALL `env(safe-area-inset-*)` -> replaced with 0px, body padding 0, sky margin-top 0, padding-top 12px only
+### User Question: why globe rotating. Verify with https://www.amcharts.com/demos/day-and-night-world-map/
 
-2. **Bottom blank strip:** Large dark area after sky events, after last card (image_6CA31228, image_958BE917)
-   - Cause: `min-height: 100dvh` + `env(safe-area-inset-bottom)` padding on body and inner containers = extra blank at bottom when content ends
-   - Fix: Removed safe-area bottom padding, set html/body min-height 100% not dvh, #root min-height 100vh, last child margin-bottom 0, padding-bottom 20px only
+### Verification of amCharts demo (opened 2026-05-13):
 
-### Fixes:
-- html, body { background: #020617, margin:0, padding:0, width:100%, height:auto }
-- #root { background:#020617, min-height:100vh, overflow visible }
-- Sky header starts at top 0, no dark gap
-- No dvh, no safe-area double padding, no manipulation
-- SW v12.9 fresh, no reload loop (kept from v12.8)
+- Demo title: Live Day and Night World Map
+- Description: Shows where day/night right now. Glowing yellow dot marks sun overhead, darker = deeper night. Map follows sun while you watch.
+- Interaction: Drag slider or press play to move time, click date to type any date, hover country, drag map sideways to turn world, up/down to move, scroll to zoom.
+- Lighter band along edge of night is twilight.
+- For developers: MapChart on Equal Earth projection (geoEqualEarth), panX: "rotateX" makes dragging turn sideways. maxPanOut 0.01 keeps from dragged off, minZoomLevel 0.5. Ocean MapPolygonSeries rectangle whole Earth, countries another. Sun MapPointSeries with two circle bullets larger blurred glow. Sun position from function calculates where sun overhead. Night MapPolygonSeries with three semi-transparent circles getGeoCircle() centered opposite sun: 90° covers sun set, 84° and 78° twilight.
 
-### Verify:
-- Badge v12.9 STABLE-LAYOUT
-- Top: pink sky starts immediately under status bar, no dark blank
-- Bottom: after sky events, no large dark strip, content ends cleanly
-- Stable, no up-down bounce, scrollable
+### Key Finding:
+- **NO auto rotation** - Equal Earth static, user drags to turn (panX rotateX)
+- Night shading moves, sun dot moves, globe static
+- Related demos: Rotating Globe is separate demo
 
-Deploy: Upload 6 files to GitHub main, Cloudflare Success, clear Safari Website Data pages.dev+fbsbx.com, restart iPhone, open typed https://offline-place-gps.pages.dev/?v=129
+### Our Bug v13.8:
+- Had chart.animate({key: 'rotationX', from: -lon, to: -lon+360, duration: 180000, loops: Infinity}) - auto rotation 360°/180s
+- This is from Rotating Globe demo, not Day/Night Map demo - WRONG
+
+### Fix v13.9:
+
+1. **Remove auto rotation:**
+   - Deleted chart.animate rotationX loops
+   - Globe static centered
+
+2. **Match amCharts demo spec:**
+   - Projection geoEqualEarth (not geoOrthographic rotating)
+   - panX: "rotateX", panY: "translateY", maxPanOut 0.01, minZoomLevel 0.5
+   - Ocean + countries polygon series
+   - Sun point with glow (yellow dot + blurred larger)
+   - Night via getGeoCircle opposite sun with 90° + twilight 84° 78°
+
+3. **Canvas fallback static:**
+   - World map static, not rotating
+   - Day gradient moves with UTC, terminator line moves, sun yellow dot moves
+   - Night shading opposite sun
+   - User dot static at Thrissur
+
+Verify: Badge v13.9 STATIC-GLOBE, globe does NOT rotate automatically, drag to turn, yellow sun dot moves, night shading moves, matches amCharts demo.
+
+Deploy ?v=139

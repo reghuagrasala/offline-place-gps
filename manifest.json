@@ -1,7 +1,7 @@
 {
-  "name": "Your Place Data - Offline GPS v12.9 Stable Layout",
+  "name": "Your Place Data - Offline GPS v13.9 Static Globe",
   "short_name": "PlaceData",
-  "description": "100% Offline GPS v12.9 - Top blank and bottom strip fixed",
+  "description": "100% Offline GPS v13.9 - Static globe no rotation, matches amCharts day/night demo",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
