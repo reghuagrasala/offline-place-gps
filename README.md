@@ -1,23 +1,25 @@
-# v12.8 Stable Fix Black Screen
+# v12.9 STABLE LAYOUT - Fix Top Blank + Bottom Strip
 
-### Black Screen Issue (your screenshot)
-- v12.7 fresh build stripped too much app code (109KB vs 261KB) - React root not rendering = black screen
-- Fix: Rebuilt from v12.3 working base (261KB), only removed reload loops surgically, kept app code
+### Issues from screenshots v12.8:
+1. **Top blank space:** Large dark navy/black area above pink sky gradient (image_7BCBA195)
+   - Cause: `env(safe-area-inset-top)` + body background #020617 + sky padding calc = double padding, sky gradient starts below status bar
+   - Fix: Removed ALL `env(safe-area-inset-*)` -> replaced with 0px, body padding 0, sky margin-top 0, padding-top 12px only
 
-### Reload Loop Issue
-- v12.4-v12.6 had client.navigate + controllerchange reload + setInterval update
-- v12.8: ALL auto-reload removed, only manual refresh
+2. **Bottom blank strip:** Large dark area after sky events, after last card (image_6CA31228, image_958BE917)
+   - Cause: `min-height: 100dvh` + `env(safe-area-inset-bottom)` padding on body and inner containers = extra blank at bottom when content ends
+   - Fix: Removed safe-area bottom padding, set html/body min-height 100% not dvh, #root min-height 100vh, last child margin-bottom 0, padding-bottom 20px only
 
-### What Changed
-- index.html: 261KB intact, only loop code commented out, fresh minimal SW registration
-- sw.js: Ultra minimal, network-first for HTML (prevents black screen from old cache), no navigate
-- CSS: Only background #020617 fix, no dvh, no manipulation
+### Fixes:
+- html, body { background: #020617, margin:0, padding:0, width:100%, height:auto }
+- #root { background:#020617, min-height:100vh, overflow visible }
+- Sky header starts at top 0, no dark gap
+- No dvh, no safe-area double padding, no manipulation
+- SW v12.9 fresh, no reload loop (kept from v12.8)
 
-### Deploy
-1. Upload 6 files to GitHub main
-2. Cloudflare wait Success
-3. Clear phone: Settings > Safari > Website Data > Delete pages.dev + fbsbx.com, Delete PWA, Restart iPhone
-4. Safari typed: https://offline-place-gps.pages.dev/?v=128
-5. Should show v12.8 STABLE-FIX-BLACK, content visible (not black), no bounce, scrollable
+### Verify:
+- Badge v12.9 STABLE-LAYOUT
+- Top: pink sky starts immediately under status bar, no dark blank
+- Bottom: after sky events, no large dark strip, content ends cleanly
+- Stable, no up-down bounce, scrollable
 
-If black screen persists, open in private tab - if private shows content, old SW cache still there, repeat clear.
+Deploy: Upload 6 files to GitHub main, Cloudflare Success, clear Safari Website Data pages.dev+fbsbx.com, restart iPhone, open typed https://offline-place-gps.pages.dev/?v=129

@@ -1,25 +1,23 @@
-/* v12.8 STABLE - Fix Black Screen + No Reload Loop - Ultra Minimal */
-const CACHE_NAME = 'place-data-v12-8-stable-black-fix';
+/* v12.9 STABLE LAYOUT - Fix top blank + bottom strip - Fresh SW */
+const CACHE_NAME = 'place-data-v12-9-stable-layout';
 
 self.addEventListener('install', (e) => {
-  console.log('[SW v12.8] Install');
+  console.log('[SW v12.9] Install');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
-  console.log('[SW v12.8] Activate - clean old caches');
+  console.log('[SW v12.9] Activate - clean old');
   e.waitUntil(
     caches.keys().then(keys => Promise.all(keys.map(k => {
       if (k !== CACHE_NAME) {
-        console.log('[SW v12.8] Delete', k);
+        console.log('[SW v12.9] Delete', k);
         return caches.delete(k);
       }
     }))).then(() => self.clients.claim())
   );
 });
 
-// Fetch - Network first for HTML to prevent black screen from old cache
-// If network fails, use cache
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   if (!e.request.url.startsWith(self.location.origin)) return;
@@ -28,7 +26,6 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(e.request)
         .then(r => {
-          // Cache a copy for offline
           if (r.ok) {
             const clone = r.clone();
             caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
@@ -40,7 +37,6 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // For assets: network first, fallback cache
   e.respondWith(
     fetch(e.request)
       .then(r => {
