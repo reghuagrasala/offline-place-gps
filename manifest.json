@@ -1,7 +1,7 @@
 {
-  "name": "Your Place Data - Offline GPS v12.7 Fresh",
+  "name": "Your Place Data - Offline GPS v12.8 Stable Fix Black",
   "short_name": "PlaceData",
-  "description": "100% Offline GPS v12.7 Fresh SW - Zero reload loop, stable",
+  "description": "100% Offline GPS v12.8 - Black screen fixed, zero reload loop",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",

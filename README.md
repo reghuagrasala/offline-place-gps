@@ -1,49 +1,23 @@
-# v12.7 FRESH SW - Zero Reload Loop
+# v12.8 Stable Fix Black Screen
 
-### Problem: Reload loop continues (reduced intensity)
+### Black Screen Issue (your screenshot)
+- v12.7 fresh build stripped too much app code (109KB vs 261KB) - React root not rendering = black screen
+- Fix: Rebuilt from v12.3 working base (261KB), only removed reload loops surgically, kept app code
 
-**Cause of loop in v12.4-v12.6:**
-- sw.js: `clients.navigate()` + `controllerchange` reload + `updatefound` reload + `localStorage version check` reload + `setInterval reg.update`
-- Even after removing navigate, old SW registrations + controllerchange still triggered reload
-- dvh + manipulation caused bounce
+### Reload Loop Issue
+- v12.4-v12.6 had client.navigate + controllerchange reload + setInterval update
+- v12.8: ALL auto-reload removed, only manual refresh
 
-**Fresh SW v12.7 Fix:**
-1. **Completely fresh sw.js from scratch:**
-   - Install: only `skipWaiting()`, no `addAll`
-   - Activate: delete all old caches, `clients.claim()` ONLY, NO `client.navigate()`, NO forced reload
-   - Fetch: navigate = network first (no loop), assets = cache first
-   - NO message handler for SKIP_WAITING loop
-   - NO client.matchAll navigate
+### What Changed
+- index.html: 261KB intact, only loop code commented out, fresh minimal SW registration
+- sw.js: Ultra minimal, network-first for HTML (prevents black screen from old cache), no navigate
+- CSS: Only background #020617 fix, no dvh, no manipulation
 
-2. **Fresh registration in index.html:**
-   - Only `navigator.serviceWorker.register('./sw.js')` on load
-   - NO `controllerchange` listener that reloads
-   - NO `updatefound` reload
-   - NO `localStorage pwa_version` check reload
-   - NO `setInterval reg.update`
+### Deploy
+1. Upload 6 files to GitHub main
+2. Cloudflare wait Success
+3. Clear phone: Settings > Safari > Website Data > Delete pages.dev + fbsbx.com, Delete PWA, Restart iPhone
+4. Safari typed: https://offline-place-gps.pages.dev/?v=128
+5. Should show v12.8 STABLE-FIX-BLACK, content visible (not black), no bounce, scrollable
 
-3. **Stable CSS:**
-   - No dvh, only 100vh
-   - No touch-action manipulation, no overscroll-behavior none
-   - Simple background #020617, overflow-y auto
-
-**Result:** Zero auto-reload, user controls refresh manually (pull to refresh), no dizziness
-
-**Deploy Steps to Kill Old Looping SW:**
-1. GitHub: Upload these 6 files to main (replace)
-2. Cloudflare: Wait Success
-3. **CRITICAL - Kill old SW on phone:**
-   - iPhone: Settings > Apps > Safari > Advanced > Website Data > Search `pages.dev` > Delete All
-   - Also search `fbsbx.com` > Delete All (if opened via Messenger)
-   - Delete PWA from home screen
-   - Restart iPhone (clears SW memory)
-   - Safari: Open `https://offline-place-gps.pages.dev/?v=127` typed (NOT via Messenger)
-   - Add to Home Screen from this fresh page
-
-**Verify:**
-- Badge v12.7 FRESH-SW
-- No auto reload, no up-down bounce
-- Can touch, scroll down smoothly
-- Stable
-
-If still reloads, open Safari DevTools (if possible) and check Console for `[SW v12.7 FRESH]` logs - should see only Install/Activate once, not looping.
+If black screen persists, open in private tab - if private shows content, old SW cache still there, repeat clear.
