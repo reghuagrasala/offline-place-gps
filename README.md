@@ -1,34 +1,30 @@
-# v12.5 FIXED - White Gap + Duplicate Title + Scroll + Offline Toast
+# v12.6 STABLE - Fix Dizziness Bounce
 
-### Errors Fixed from Screen Recording (v12.4)
+### Error in v12.4 / v12.5: Very Unstable, Going Up and Down Constantly
 
-**1. White Top Gap (iPhone PWA):**
-- Cause: body had `padding-top: env(safe-area-inset-top)` + inner sky container also had `calc(env(safe-area-inset-top)+40px)` = double inset, html background white default = white gap
-- Fix: html, body background #020617, body padding 0, sky container single safe-area padding via `.sky-header-fix`
+**Root Cause:**
+- sw.js had `clients.forEach(client => client.navigate(client.url + '?v=124'))` on every activate = infinite reload loop
+- Main thread had `setInterval(reg.update, 60000)` + `controllerchange` reload = constant reload
+- CSS had `min-height: 100dvh` + `100vh` - dvh changes when browser UI hides/shows = layout shift up/down
+- `touch-action: manipulation` + `overscroll-behavior: none` + nested `max-height: 100dvh overflow-y: auto` = scroll trap bounce
+- `skyShift 18s` animation with filter brightness caused repaints
 
-**2. Duplicate Title / Double Rendering:**
-- Cause: React StrictMode double mount + scroll-fix style created second header during scroll, version string `2026-05-13-v12-4` duplicated
-- Fix: Hidden duplicate h1, fixed version string to `2026-05-13`, single title
+**Fix in v12.6 STABLE:**
+1. Removed `client.navigate()` loop from sw.js - NO auto navigation
+2. Removed `setInterval reg.update` - NO auto update every 60s
+3. Changed all `100dvh` to `100vh` or `auto`, removed `dvh`
+4. Changed `touch-action: manipulation` to `touch-action: auto`
+5. Changed `overscroll-behavior: none` to `contain`
+6. Removed `skyShift` animation filter, set to static
+7. html/body: `overflow-y: auto`, `height: auto`, `position: relative/static`, no fixed traps
+8. Background #020617 on html/body/root to fix white gap without safe-area double padding
 
-**3. Offline Ready Toast Stuck in Middle:**
-- Cause: Toast was positioned inside sky flow, not fixed
-- Fix: Now fixed bottom center with class `offline-ready-toast`, auto fade out after 3s via animation
-
-**4. Ulaa Cannot Scroll Down (previous):**
-- Fixed in v12.4, kept in v12.5: `touch-action: pan-y`, `overflow-y: auto`, `-webkit-overflow-scrolling: touch`
-
-**5. Safari Old Version:**
-- Fix: SW v12.5 cache `place-data-v12-5-fixed`, network-first for navigations, deletes all old caches
+**Result:** Stable, no bounce, can touch, can scroll down slowly, no dizziness
 
 ### Verify
-- Header badge: **v12.5 FIXED**
-- No white gap on top in standalone PWA (dark #020617 fills notch)
-- Single title, single DIGIPIN pill
-- Offline Ready toast appears at bottom then disappears after 3s
-- Can scroll down fully to moon, sky events, compass
-- No duplicate OFFLINE PWA line
+- Badge: v12.6 STABLE
+- Open in Safari typed `?v=126` - should be stable, no up-down
+- Ulaa PWA - should scroll smoothly down, no bounce
+- No auto reload
 
-### Files
-index.html, manifest.json, sw.js, README.md, icon-192.png, icon-512.png
-
-Deploy: Upload all to GitHub main, Cloudflare wait Success, open `?v=125` in Safari typed (not via Facebook fbsbx.com), Add to Home Screen.
+Build: v12.6 Stable | 2026-05-13

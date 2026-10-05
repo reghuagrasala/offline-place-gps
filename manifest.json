@@ -1,8 +1,8 @@
 {
-  "name": "Your Place Data - Offline GPS v12.5 Fixed",
+  "name": "Your Place Data - Offline GPS v12.6 Stable",
   "short_name": "PlaceData",
-  "description": "100% Offline GPS v12.5 - White gap fixed, scroll fixed, duplicate title fixed",
-  "start_url": "./?utm_source=pwa&v=125",
+  "description": "100% Offline GPS v12.6 Stable - No bounce, no dizziness",
+  "start_url": "./?utm_source=pwa&v=126",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#020617",

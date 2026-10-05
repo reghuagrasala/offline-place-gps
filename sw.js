@@ -1,47 +1,51 @@
-/* v12.5 - Fix white gap + duplicate header + scroll + Safari old cache */
-const CACHE_NAME = 'place-data-v12-5-fixed-2026-05-13';
-const ASSETS = ['./','./index.html','./manifest.json','./README.md'];
+/* v12.6 STABLE - No bounce, no auto-reload loop, no dizziness */
+const CACHE_NAME = 'place-data-v12-6-stable-2026-05-13';
 
 self.addEventListener('install', (e) => {
-  console.log('[SW v12.5] Install', CACHE_NAME);
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  console.log('[SW v12.6] Install', CACHE_NAME);
+  // Don't use addAll that can fail, use cache open and skipWaiting
+  e.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (e) => {
-  console.log('[SW v12.5] Activate deleting old');
+  console.log('[SW v12.6] Activate - stable, deleting old caches without forced navigation');
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
+    caches.keys().then(keys => 
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => {
+        console.log('[SW v12.6] Deleting old cache', k);
+        return caches.delete(k);
+      }))
+    ).then(() => self.clients.claim())
+    // NO client.navigate loop here - that caused dizziness bounce
   );
 });
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   if (!e.request.url.startsWith(self.location.origin)) return;
-  if (e.request.mode === 'navigate' || e.request.url.includes('index.html')) {
-    e.respondWith(fetch(e.request).then(r => {
-      if (r.ok) {
-        const cl = r.clone();
-        caches.open(CACHE_NAME).then(c => c.put(e.request, cl));
-      }
-      return r;
-    }).catch(() => caches.match('./index.html')));
+  
+  // For navigation, network first but NO auto reload
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match('./index.html') || caches.match('/'))
+    );
     return;
   }
+  
+  // For assets, cache first then network
   e.respondWith(
     caches.match(e.request).then(cached => {
-      const fp = fetch(e.request).then(nr => {
-        if (nr && nr.ok) {
-          const cl = nr.clone();
-          caches.open(CACHE_NAME).then(c => c.put(e.request, cl));
-        }
-        return nr;
+      return cached || fetch(e.request).then(res => {
+        // Don't cache if not ok
+        if (!res || !res.ok) return res;
+        return res;
       }).catch(() => cached);
-      return cached || fp;
     })
   );
 });
 
 self.addEventListener('message', (e) => {
-  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (e.data && e.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
