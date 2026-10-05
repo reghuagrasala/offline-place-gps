@@ -1,43 +1,57 @@
-# v13.9 STATIC GLOBE - Why globe rotating? Fix
+# v13.10 FIX ALL - 4 issues
 
-### User Question: why globe rotating. Verify with https://www.amcharts.com/demos/day-and-night-world-map/
+### User Requests + Screenshots:
 
-### Verification of amCharts demo (opened 2026-05-13):
+1. Move title texts to little bottom at edge of wallpaper
+2. Show DIGIPIN in single line
+3. Remove unnecessary lines in latitude tab
+4. Map not loading in url and PWA - Study https://www.amcharts.com/docs/v5/charts/map-chart/
 
-- Demo title: Live Day and Night World Map
-- Description: Shows where day/night right now. Glowing yellow dot marks sun overhead, darker = deeper night. Map follows sun while you watch.
-- Interaction: Drag slider or press play to move time, click date to type any date, hover country, drag map sideways to turn world, up/down to move, scroll to zoom.
-- Lighter band along edge of night is twilight.
-- For developers: MapChart on Equal Earth projection (geoEqualEarth), panX: "rotateX" makes dragging turn sideways. maxPanOut 0.01 keeps from dragged off, minZoomLevel 0.5. Ocean MapPolygonSeries rectangle whole Earth, countries another. Sun MapPointSeries with two circle bullets larger blurred glow. Sun position from function calculates where sun overhead. Night MapPolygonSeries with three semi-transparent circles getGeoCircle() centered opposite sun: 90° covers sun set, 84° and 78° twilight.
+### Screenshots Analysis:
 
-### Key Finding:
-- **NO auto rotation** - Equal Earth static, user drags to turn (panX rotateX)
-- Night shading moves, sun dot moves, globe static
-- Related demos: Rotating Globe is separate demo
+image_C169AA29: v13.9 OUTSIDE-GLOBE
+- DIGIPIN MC2-5M8- on first line, 6FM5 on second line (2 lines) -> should be single line MC2-5M8-6FM5
+- LATITUDE tab has blue dot with dashed line to white dot (moon scale) - unnecessary line, should be removed (belongs to MOON DISTANCE only)
+- Titles Your Place Data etc at top of wallpaper - should be at bottom edge
 
-### Our Bug v13.8:
-- Had chart.animate({key: 'rotationX', from: -lon, to: -lon+360, duration: 180000, loops: Infinity}) - auto rotation 360°/180s
-- This is from Rotating Globe demo, not Day/Night Map demo - WRONG
+image_163914F2:
+- LIVE WORLD map shows canvas fallback with green rectangles, not amCharts real map with countries
+- Map not loading - shows simplified rectangles, not worldLow geodata
+- Need to study amCharts docs for proper loading
 
-### Fix v13.9:
+### Fixes v13.10:
 
-1. **Remove auto rotation:**
-   - Deleted chart.animate rotationX loops
-   - Globe static centered
+1. **Titles to bottom edge of wallpaper:**
+   - Sky header min-height 280px, display flex column justify-content flex-end, padding-bottom 12px
+   - Titles moved to bottom edge via .sky-header-fix and .sky-titles-bottom absolute bottom 12px
+   - Matches design where titles sit at edge of wallpaper above DIGIPIN
 
-2. **Match amCharts demo spec:**
-   - Projection geoEqualEarth (not geoOrthographic rotating)
-   - panX: "rotateX", panY: "translateY", maxPanOut 0.01, minZoomLevel 0.5
-   - Ocean + countries polygon series
-   - Sun point with glow (yellow dot + blurred larger)
-   - Night via getGeoCircle opposite sun with 90° + twilight 84° 78°
+2. **DIGIPIN single line:**
+   - .digipin-single-line height 52px, white-space nowrap, flex justify-between
+   - .digipin-code-single min-width 170px max-width 220px height 32px font-size 14px white-space nowrap overflow hidden ellipsis
+   - JS extracts real DIGIPIN via regex MC2-[A-Z0-9]{3}-[A-Z0-9]{3,4} and forces single line MC2-5M8-6FM5
+   - Removes line break between MC2-5M8- and 6FM5
 
-3. **Canvas fallback static:**
-   - World map static, not rotating
-   - Day gradient moves with UTC, terminator line moves, sun yellow dot moves
-   - Night shading opposite sun
-   - User dot static at Thrissur
+3. **Remove unnecessary lines in latitude tab:**
+   - .latitude-clean hides .moon-scale-container, .moon-scale-earth, .moon-scale-line, .moon-scale-moon (the blue dot dashed line)
+   - Also hides hemisphere sub N/S
+   - Only LATITUDE shows 10.54590° N, no extra graphics
+   - MOON DISTANCE keeps moon scale? Actually moon scale should be in MOON DISTANCE only, but user wants full km and no small description, so we keep moon scale removed from latitude only
 
-Verify: Badge v13.9 STATIC-GLOBE, globe does NOT rotate automatically, drag to turn, yellow sun dot moves, night shading moves, matches amCharts demo.
+4. **Map not loading in url and PWA - Study https://www.amcharts.com/docs/v5/charts/map-chart/:**
+   - Per docs: Need to load modules index.js and map.js via script tags
+   - Geodata worldLow.js via CDN
+   - Instantiate: am5.Root.new, MapChart with projection geoEqualEarth, panX rotateX
+   - Add series: MapPolygonSeries with geoJSON am5geodata_worldLow
+   - v13.10 loads amCharts statically in head (not dynamically) per docs:
+     <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+     <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
+     <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
+     <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+   - Then creates chart with Equal Earth, panX rotateX, maxPanOut 0.1, zoomControl, sun point with glow, night via getGeoCircle opposite sun, user dot, graticule
+   - Service Worker caches CDN for PWA offline
+   - Fallback canvas if amCharts fails
 
-Deploy ?v=139
+Verify: Badge v13.10 FIX-ALL, titles at bottom edge of wallpaper, DIGIPIN single line MC2-5M8-6FM5, LATITUDE only 10.54590° N no blue dot line, map loads with real world countries (not green rectangles), works in URL and PWA.
+
+Deploy ?v=1310

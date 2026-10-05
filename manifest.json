@@ -1,7 +1,7 @@
 {
-  "name": "Your Place Data - Offline GPS v13.13 Verified Stable",
+  "name": "Your Place Data - Offline GPS v13.10 Fix All",
   "short_name": "PlaceData",
-  "description": "100% Offline GPS v13.13 - Verified all tabs and stability, working globe",
+  "description": "100% Offline GPS v13.10 - Titles bottom, DIGIPIN single line, latitude clean, map loading per amCharts docs",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",

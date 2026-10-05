@@ -1,6 +1,6 @@
 /* v13.10 FIX ALL - PWA map loading */
-const CACHE_NAME = 'place-data-v13-13-verified-stable';
-const CDN_CACHE = 'place-data-cdn-v13-13';
+const CACHE_NAME = 'place-data-v13-10-fix-all';
+const CDN_CACHE = 'place-data-cdn-v13-10';
 const CDN_URLS = [
   'https://cdn.amcharts.com/lib/5/index.js',
   'https://cdn.amcharts.com/lib/5/map.js',
