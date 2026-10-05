@@ -1,46 +1,34 @@
-# Your Place Data - Offline GPS PWA v12.4 Scroll Fixed
+# v12.5 FIXED - White Gap + Duplicate Title + Scroll + Offline Toast
 
-**Fixes Ulaa scroll lock + Safari old cache**
+### Errors Fixed from Screen Recording (v12.4)
 
-Live: https://offline-place-gps.pages.dev/
+**1. White Top Gap (iPhone PWA):**
+- Cause: body had `padding-top: env(safe-area-inset-top)` + inner sky container also had `calc(env(safe-area-inset-top)+40px)` = double inset, html background white default = white gap
+- Fix: html, body background #020617, body padding 0, sky container single safe-area padding via `.sky-header-fix`
 
-### What's Fixed in v12.4
+**2. Duplicate Title / Double Rendering:**
+- Cause: React StrictMode double mount + scroll-fix style created second header during scroll, version string `2026-05-13-v12-4` duplicated
+- Fix: Hidden duplicate h1, fixed version string to `2026-05-13`, single title
 
-**Ulaa Browser PWA - Cannot Scroll Down (FIXED):**
-- Root cause: `touch-action: manipulation` + `overscroll-behavior: none` + `max-height: 100dvh` locked scroll in standalone PWA
-- Fix: Changed to `touch-action: pan-y`, `overscroll-behavior-y: auto`, `overflow-y: auto`, `-webkit-overflow-scrolling: touch`, removed fixed height traps
-- Added `<style id="scroll-fix-v12-4">` override that forces html/body/#root to be scrollable
+**3. Offline Ready Toast Stuck in Middle:**
+- Cause: Toast was positioned inside sky flow, not fixed
+- Fix: Now fixed bottom center with class `offline-ready-toast`, auto fade out after 3s via animation
 
-**Safari Add to Home Screen Shows Old Version (FIXED):**
-- Root cause: Safari PWA keeps old cache `place-data-v7-final-locked` and old `index.html` separate from Safari browser cache. Network-first for navigation requests now.
-- Fix: SW v12.4 cache `place-data-v12-4-scroll-fixed` deletes ALL old caches on activate, forces `clients.claim()` + reload, network-first for `index.html` and navigations
-- Added version check: `localStorage pwa_version` + auto clear + reload
+**4. Ulaa Cannot Scroll Down (previous):**
+- Fixed in v12.4, kept in v12.5: `touch-action: pan-y`, `overflow-y: auto`, `-webkit-overflow-scrolling: touch`
 
-### Verification
-- Header badge must show **v12.4 SCROLL-FIXED**
-- Bottom should NOT show old `ON | Blink OFF | Update:2s` bar - only yellow blinks every 10s
-- Ulaa PWA: Can scroll down to see all 9 tabs + sky events + moon
-- Safari PWA: After delete + reinstall, shows v12.4 not old
+**5. Safari Old Version:**
+- Fix: SW v12.5 cache `place-data-v12-5-fixed`, network-first for navigations, deletes all old caches
+
+### Verify
+- Header badge: **v12.5 FIXED**
+- No white gap on top in standalone PWA (dark #020617 fills notch)
+- Single title, single DIGIPIN pill
+- Offline Ready toast appears at bottom then disappears after 3s
+- Can scroll down fully to moon, sky events, compass
+- No duplicate OFFLINE PWA line
 
 ### Files
-- `index.html` - 261KB - main app
-- `manifest.json` - PWA manifest
-- `sw.js` - SW v12.4
-- `README.md` - this file
-- `icon-192.png`, `icon-512.png`
+index.html, manifest.json, sw.js, README.md, icon-192.png, icon-512.png
 
-### Deploy
-1. Upload all 6 files to GitHub main root
-2. Cloudflare Pages - wait green Success
-3. Test:
-   - Laptop: `https://offline-place-gps.pages.dev/?v=124`
-   - Ulaa: Delete PWA > Open `?v=124` > Add to Home Screen > Should scroll
-   - Safari: Delete PWA > Settings > Safari > Advanced > Website Data > Delete pages.dev > Open `?v=124` > Add to Home Screen > Should show v12.4
-
-### Previous Fixes Kept
-- 2-col layout gap 8px, TIME ZONE/MOON DIST full-width same height grid-column 1/-1
-- Yellow results wider 21px scaleX 1.02 scaleY 1.05
-- Tiny fonts bright white #FFFFFF
-- Title bar +18px, glassy, 24h sky, sky events 60s horizontal, heading compass N badge
-
-Build: v12.4 Scroll Fixed | 2026-05-13
+Deploy: Upload all to GitHub main, Cloudflare wait Success, open `?v=125` in Safari typed (not via Facebook fbsbx.com), Add to Home Screen.

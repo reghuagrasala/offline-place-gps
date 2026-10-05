@@ -1,8 +1,8 @@
 {
-  "name": "Your Place Data - Offline GPS v12.4 Scroll Fixed",
+  "name": "Your Place Data - Offline GPS v12.5 Fixed",
   "short_name": "PlaceData",
-  "description": "100% Offline GPS v12.4 - Scroll fixed for PWA, bright white fonts, wider yellows",
-  "start_url": "./?utm_source=pwa&v=124",
+  "description": "100% Offline GPS v12.5 - White gap fixed, scroll fixed, duplicate title fixed",
+  "start_url": "./?utm_source=pwa&v=125",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#020617",
@@ -10,17 +10,7 @@
   "scope": "./",
   "categories": ["navigation", "utilities"],
   "icons": [
-    {
-      "src": "./icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    {"src": "./icon-192.png","sizes": "192x192","type": "image/png","purpose": "any maskable"},
+    {"src": "./icon-512.png","sizes": "512x512","type": "image/png","purpose": "any maskable"}
   ]
 }
