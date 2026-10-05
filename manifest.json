@@ -1,0 +1,26 @@
+{
+  "name": "Your Place Data - Offline GPS v12.3",
+  "short_name": "PlaceData",
+  "description": "100% Offline GPS, DIGIPIN, Sky Events - 2-col, bright white tiny fonts, wider yellows, no API cost - v12.3",
+  "start_url": "./?utm_source=pwa&v=123",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "scope": "./",
+  "categories": ["navigation", "utilities"],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
