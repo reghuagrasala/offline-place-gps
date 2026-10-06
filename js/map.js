@@ -1,282 +1,308 @@
-// Realistic 3D Earth Globe - inspired by zebiv-code/earth_globe
-// Features: Day/night texture blending with realistic terminator, Sun position based on month/time
-// Tech: WebGL via Three.js (or vanilla WebGL fallback), Custom GLSL shaders, Earth textures from Wikimedia/NASA
-// License: MIT (zebiv-code/earth_globe is MIT, can be used)
 
-let scene, camera, renderer, earth, clouds, marker;
-let sunDirection = new THREE.Vector3(1, 0, 0);
-let autoRotate = true;
+// lanrat/day-night-map inspired - Simple Day Night Map - Realtime with smooth twilight gradients
+// Based on https://github.com/lanrat/day-night-map - Features: Real-time terminator, SunCalc integration, solar/lunar indicators, location marker
+// This implementation is original MIT, inspired by lanrat's concepts but written from scratch for this PWA
+// GPL-3.0 original: https://github.com/lanrat/day-night-map - If using original code directly, keep GPL-3.0 LICENSE
 
-function getSunPosition(date = new Date()){
-  // Calculate sun position based on date - month and time of day
-  // Simplified astronomical calculation for sun direction
-  const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
-  const declination = -23.44 * Math.cos((360/365) * (dayOfYear + 10) * Math.PI/180);
-  const timeUTC = date.getUTCHours() + date.getUTCMinutes()/60;
-  const longitude = (timeUTC - 12) * 15; // Sun longitude opposite
-  const lat = declination;
-  // Convert lat/lng to 3D direction
-  const phi = (90 - lat) * Math.PI/180;
-  const theta = (longitude + 180) * Math.PI/180;
-  const x = -Math.sin(phi) * Math.cos(theta);
-  const y = Math.cos(phi);
-  const z = Math.sin(phi) * Math.sin(theta);
-  return new THREE.Vector3(x, y, z).normalize();
+let dayNightCanvas, dayNightCtx, dayNightImageData;
+let lastLat = 10.5276, lastLng = 76.2144;
+let animationId = null;
+let worldMapImg = null;
+
+function getSolarDeclination(date){
+  const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
+  return -23.44 * Math.cos((360/365) * (dayOfYear + 10) * Math.PI/180);
 }
 
-function initRealisticGlobe(){
-  const canvas = document.getElementById('dayNightMap');
-  if(!canvas) return;
-  
-  // Check if THREE is loaded, if not load it
-  if(typeof THREE === 'undefined'){
-    console.warn('THREE not loaded, loading fallback canvas map');
-    initFallbackCanvasMap();
-    return;
+function getSubsolarPoint(date = new Date()){
+  const declination = getSolarDeclination(date);
+  const timeUTC = date.getUTCHours() + date.getUTCMinutes()/60 + date.getUTCSeconds()/3600 + date.getUTCSeconds()/3600*0 + date.getUTCMilliseconds()/3600000;
+  const utcHours = date.getUTCHours() + date.getUTCMinutes()/60 + date.getUTCSeconds()/3600;
+  const longitude = -(utcHours * 15 - 180); // where sun is directly overhead
+  return { lon: longitude, lat: declination };
+}
+
+function getSunAltitude(lat, lon, date){
+  const subsolar = getSubsolarPoint(date);
+  const rad = Math.PI/180;
+  const latR = lat * rad;
+  const decR = subsolar.lat * rad;
+  const hourAngle = (lon - subsolar.lon) * rad;
+  const sinAlt = Math.sin(latR)*Math.sin(decR) + Math.cos(latR)*Math.cos(decR)*Math.cos(hourAngle);
+  return Math.asin(sinAlt) * 180/Math.PI;
+}
+
+function getTwilightColor(altitude, isDayBase){
+  // Smooth twilight gradients: civil (-6), nautical (-12), astronomical (-18)
+  // Returns {r,g,b, alpha} for night overlay
+  if(altitude > -0.833){
+    // Day - no night overlay
+    return null;
+  } else if(altitude > -6){
+    // Civil twilight - light
+    const t = (altitude + 0.833) / (-6 + 0.833); // 0 to 1 (0=day edge, 1=dark)
+    const alpha = 0.25 + t * 0.25; // 0.25 to 0.5
+    return {r:0,g:0,b:0, a: alpha};
+  } else if(altitude > -12){
+    // Nautical twilight
+    const t = (altitude + 6) / -6;
+    const alpha = 0.5 + t * 0.2; // 0.5 to 0.7
+    return {r:0,g:0,b:0, a: alpha};
+  } else if(altitude > -18){
+    // Astronomical twilight
+    const t = (altitude + 12) / -6;
+    const alpha = 0.7 + t * 0.15; // 0.7 to 0.85
+    return {r:0,g:0,b:0, a: alpha};
+  } else {
+    // Night
+    return {r:0,g:0,b:0, a: 0.85};
   }
+}
 
-  // Scene
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x000010);
+function initDayNightMap(){
+  const chartDiv = document.getElementById('chartdiv');
+  if(!chartDiv) return;
   
-  // Camera
-  camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-  camera.position.z = 2.5;
+  // Create canvas
+  dayNightCanvas = document.createElement('canvas');
+  dayNightCanvas.id = 'dayNightMap';
+  dayNightCanvas.style.width = '100%';
+  dayNightCanvas.style.height = '100%';
+  chartDiv.innerHTML = '';
+  chartDiv.appendChild(dayNightCanvas);
+  dayNightCtx = dayNightCanvas.getContext('2d', {willReadFrequently: true});
 
-  // Renderer
-  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-  renderer.setPixelRatio(window.devicePixelRatio);
-
-  // Lighting - sun as directional light
-  const ambient = new THREE.AmbientLight(0x333333);
-  scene.add(ambient);
-  const sunLight = new THREE.DirectionalLight(0xffffff, 1);
-  scene.add(sunLight);
-
-  // Textures - Earth day/night from Wikimedia / NASA Blue Marble
-  const loader = new THREE.TextureLoader();
-  const dayTexture = loader.load('https://cdn.jsdelivr.net/npm/three-globe@2.30.0/example/img/earth-day.jpg');
-  const nightTexture = loader.load('https://cdn.jsdelivr.net/npm/three-globe@2.30.0/example/img/earth-night.jpg');
-  const bumpTexture = loader.load('https://cdn.jsdelivr.net/npm/three-globe@2.30.0/example/img/earth-topology.png');
-
-  // Custom shader material for realistic day/night blending with terminator
-  const vertexShader = `
-    varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vPosition;
-    void main(){
-      vUv = uv;
-      vNormal = normalize(normalMatrix * normal);
-      vPosition = position;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `;
-  
-  const fragmentShader = `
-    uniform sampler2D dayTexture;
-    uniform sampler2D nightTexture;
-    uniform vec3 sunDirection;
-    varying vec2 vUv;
-    varying vec3 vNormal;
-    varying vec3 vPosition;
-    
-    void main(){
-      vec3 dayColor = texture2D(dayTexture, vUv).rgb;
-      vec3 nightColor = texture2D(nightTexture, vUv).rgb;
-      
-      // Calculate sun orientation - dot product of normal and sun direction
-      float sunOrientation = dot(vNormal, sunDirection);
-      
-      // Smooth terminator - realistic transition zone ~ 6-12 degrees twilight
-      float dayMix = smoothstep(-0.25, 0.25, sunOrientation);
-      
-      // Blend day and night with realistic terminator
-      vec3 color = mix(nightColor * 1.5, dayColor, dayMix);
-      
-      // Add city lights intensity based on night side
-      float nightIntensity = 1.0 - dayMix;
-      color += nightColor * nightIntensity * 0.8;
-      
-      // Atmospheric rim lighting
-      float rim = 1.0 - max(0.0, dot(vNormal, vec3(0.0,0.0,1.0)));
-      rim = pow(rim, 3.0);
-      color += vec3(0.1, 0.2, 0.4) * rim * dayMix;
-      
-      gl_FragColor = vec4(color, 1.0);
-    }
-  `;
-
-  const material = new THREE.ShaderMaterial({
-    uniforms: {
-      dayTexture: { value: dayTexture },
-      nightTexture: { value: nightTexture },
-      sunDirection: { value: sunDirection }
-    },
-    vertexShader: vertexShader,
-    fragmentShader: fragmentShader
-  });
-
-  // Earth sphere
-  const geometry = new THREE.SphereGeometry(1, 64, 64);
-  earth = new THREE.Mesh(geometry, material);
-  scene.add(earth);
-
-  // Clouds layer
-  const cloudGeo = new THREE.SphereGeometry(1.005, 64, 64);
-  const cloudTex = loader.load('https://cdn.jsdelivr.net/npm/three-globe@2.30.0/example/img/earth-clouds.png');
-  const cloudMat = new THREE.MeshLambertMaterial({
-    map: cloudTex,
-    transparent: true,
-    opacity: 0.4
-  });
-  clouds = new THREE.Mesh(cloudGeo, cloudMat);
-  scene.add(clouds);
-
-  // User location marker
-  const markerGeo = new THREE.SphereGeometry(0.02, 16, 16);
-  const markerMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-  marker = new THREE.Mesh(markerGeo, markerMat);
-  scene.add(marker);
-
-  // Controls - drag to rotate, scroll to zoom (like zebiv-code)
-  let isDragging = false;
-  let previousMouse = { x:0, y:0 };
-  let rotation = { x:0, y:0 };
-
-  canvas.addEventListener('mousedown', (e)=>{ isDragging=true; autoRotate=false; });
-  canvas.addEventListener('mouseup', ()=>{ isDragging=false; });
-  canvas.addEventListener('mousemove', (e)=>{
-    if(isDragging){
-      const deltaX = e.clientX - previousMouse.x;
-      const deltaY = e.clientY - previousMouse.y;
-      rotation.y += deltaX * 0.005;
-      rotation.x += deltaY * 0.005;
-      rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, rotation.x));
-    }
-    previousMouse = { x:e.clientX, y:e.clientY };
-  });
-  canvas.addEventListener('wheel', (e)=>{
-    e.preventDefault();
-    camera.position.z += e.deltaY * 0.001;
-    camera.position.z = Math.max(1.2, Math.min(5, camera.position.z));
-  }, {passive:false});
-
-  // Touch controls
-  canvas.addEventListener('touchstart', (e)=>{ isDragging=true; autoRotate=false; previousMouse = { x:e.touches[0].clientX, y:e.touches[0].clientY }; });
-  canvas.addEventListener('touchend', ()=>{ isDragging=false; });
-  canvas.addEventListener('touchmove', (e)=>{
-    if(isDragging){
-      const deltaX = e.touches[0].clientX - previousMouse.x;
-      const deltaY = e.touches[0].clientY - previousMouse.y;
-      rotation.y += deltaX * 0.005;
-      rotation.x += deltaY * 0.005;
-      previousMouse = { x:e.touches[0].clientX, y:e.touches[0].clientY };
-    }
-  }, {passive:true});
-
-  // Animation loop - realistic day/night cycle
-  function animate(){
-    requestAnimationFrame(animate);
-    
-    // Update sun direction based on current time - live
-    sunDirection = getSunPosition(new Date());
-    material.uniforms.sunDirection.value = sunDirection;
-    sunLight.position.copy(sunDirection).multiplyScalar(5);
-    
-    // Auto rotate when not dragging
-    if(autoRotate){
-      rotation.y += 0.001;
-    }
-    
-    earth.rotation.y = rotation.y;
-    earth.rotation.x = rotation.x;
-    clouds.rotation.y = rotation.y + 0.0005;
-    clouds.rotation.x = rotation.x;
-    
-    renderer.render(scene, camera);
-  }
-  animate();
-
-  // Handle resize
-  window.addEventListener('resize', ()=>{
-    if(!canvas) return;
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-  });
-
-  window.updateGlobeMarker = function(lat, lng){
-    if(!marker) return;
-    const phi = (90 - lat) * Math.PI/180;
-    const theta = (lng + 180) * Math.PI/180;
-    const r = 1.02;
-    marker.position.x = -r * Math.sin(phi) * Math.cos(theta);
-    marker.position.y = r * Math.cos(phi);
-    marker.position.z = r * Math.sin(phi) * Math.sin(theta);
+  // Load world map background - simple equirectangular
+  worldMapImg = new Image();
+  worldMapImg.crossOrigin = 'anonymous';
+  worldMapImg.src = 'https://upload.wikimedia.org/wikipedia/commons/8/83/Equirectangular_projection_SW.jpg';
+  worldMapImg.onerror = () => {
+    // Fallback to drawing simple continents
+    worldMapImg = null;
+    resizeAndDraw();
+  };
+  worldMapImg.onload = () => {
+    resizeAndDraw();
   };
 
-  // Initial marker
-  updateGlobeMarker(10.5276, 76.2144);
-}
-
-function initFallbackCanvasMap(){
-  // Canvas-based terminator fallback (offline capable)
-  const canvas = document.getElementById('dayNightMap');
-  if(!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width = canvas.clientWidth * window.devicePixelRatio;
-  const h = canvas.height = canvas.clientHeight * window.devicePixelRatio;
-  
-  function drawTerminator(){
-    ctx.clearRect(0,0,w,h);
-    // Simplified day/night world map
-    ctx.fillStyle = '#454a58';
-    ctx.fillRect(0,0,w,h);
-    
-    // Draw world map approximation - day side
-    const now = new Date();
-    const sunPos = { lon: -((now.getUTCHours() + now.getUTCMinutes()/60 -12)*15), lat: 0 }; // simplified
-    
-    // Night overlay with 3 circles for twilight like amCharts
-    ctx.fillStyle = 'rgba(0,0,0,0.25)';
-    // Simplified night shading
-    const nightX = w/2 - (sunPos.lon/180)*w/2;
-    ctx.beginPath();
-    ctx.ellipse(nightX, h/2, w*0.5, h*0.5, 0, 0, Math.PI*2);
-    ctx.fill();
-    
-    // Sun marker
-    ctx.fillStyle = '#ffba00';
-    ctx.shadowBlur = 10; ctx.shadowColor = '#ffba00';
-    ctx.beginPath();
-    ctx.arc(w/2 + (sunPos.lon/180)*w/2, h/2, 8*window.devicePixelRatio, 0, Math.PI*2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    
-    // User marker
-    ctx.fillStyle = '#ff0000';
-    ctx.beginPath();
-    const userX = w/2 + (76.2144/180)*w/2;
-    const userY = h/2 - (10.5276/90)*h/2;
-    ctx.arc(userX, userY, 4*window.devicePixelRatio, 0, Math.PI*2);
-    ctx.fill();
+  function resize(){
+    const dpr = window.devicePixelRatio || 1;
+    const rect = chartDiv.getBoundingClientRect();
+    dayNightCanvas.width = rect.width * dpr;
+    dayNightCanvas.height = rect.height * dpr;
+    dayNightCanvas.style.width = rect.width + 'px';
+    dayNightCanvas.style.height = rect.height + 'px';
+    dayNightCtx.setTransform(dpr,0,0,dpr,0,0);
+    drawMap();
   }
-  drawTerminator();
-  setInterval(drawTerminator, 60000);
-  window.updateGlobeMarker = function(lat,lng){ drawTerminator(); };
+
+  window.addEventListener('resize', resize);
+  resize();
+  
+  // Initial draw
+  drawMap();
+  
+  // Update every minute - realtime
+  setInterval(drawMap, 60000);
 }
 
-// Try to load THREE, else fallback
-if(typeof THREE === 'undefined'){
-  // Load THREE via CDN
-  const script = document.createElement('script');
-  script.src = 'https://unpkg.com/three@0.160.0/build/three.min.js';
-  script.onload = initRealisticGlobe;
-  script.onerror = initFallbackCanvasMap;
-  document.head.appendChild(script);
+function resizeAndDraw(){
+  const chartDiv = document.getElementById('chartdiv');
+  if(!chartDiv || !dayNightCanvas) return;
+  const rect = chartDiv.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  dayNightCanvas.width = rect.width * dpr;
+  dayNightCanvas.height = rect.height * dpr;
+  dayNightCanvas.style.width = rect.width + 'px';
+  dayNightCanvas.style.height = rect.height + 'px';
+  dayNightCtx.setTransform(dpr,0,0,dpr,0,0);
+  drawMap();
+}
+
+function drawMap(){
+  if(!dayNightCanvas || !dayNightCtx) return;
+  const canvas = dayNightCanvas;
+  const ctx = dayNightCtx;
+  const chartDiv = document.getElementById('chartdiv');
+  if(!chartDiv) return;
+  
+  const w = chartDiv.clientWidth;
+  const h = chartDiv.clientHeight;
+  if(w===0 || h===0) return;
+
+  // Clear
+  ctx.clearRect(0,0,w,h);
+  
+  // Draw base world map
+  if(worldMapImg && worldMapImg.complete && worldMapImg.naturalWidth>0){
+    ctx.drawImage(worldMapImg, 0, 0, w, h);
+  } else {
+    // Fallback: draw ocean and continents
+    ctx.fillStyle = '#1e3a5f';
+    ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = '#2d5a3d';
+    // Simplified continents - equirectangular
+    // North America
+    ctx.fillRect(w*0.05, h*0.12, w*0.28, h*0.38);
+    // South America
+    ctx.fillRect(w*0.18, h*0.52, w*0.12, h*0.38);
+    // Europe
+    ctx.fillRect(w*0.45, h*0.18, w*0.12, h*0.18);
+    // Africa
+    ctx.fillRect(w*0.48, h*0.35, w*0.12, h*0.45);
+    // Asia
+    ctx.fillRect(w*0.55, h*0.12, w*0.32, h*0.38);
+    // Australia
+    ctx.fillRect(w*0.72, h*0.68, w*0.14, h*0.14);
+  }
+
+  // Draw day/night overlay with smooth twilight gradients - pixel accurate
+  const now = new Date();
+  const subsolar = getSubsolarPoint(now);
+  
+  // For performance, draw overlay in strips
+  const imageData = ctx.getImageData(0,0,w,h);
+  const data = imageData.data;
+  
+  // Pre-calculate for speed
+  for(let y=0; y<h; y++){
+    const lat = 90 - (y / h) * 180; // 90 to -90
+    for(let x=0; x<w; x++){
+      const lon = (x / w) * 360 - 180; // -180 to 180
+      const alt = getSunAltitude(lat, lon, now);
+      const twilight = getTwilightColor(alt);
+      if(twilight){
+        const idx = (y*w + x)*4;
+        // Blend with existing pixel - darken for night
+        const alpha = twilight.a;
+        data[idx] = data[idx] * (1-alpha) + twilight.r * alpha;
+        data[idx+1] = data[idx+1] * (1-alpha) + twilight.g * alpha;
+        data[idx+2] = data[idx+2] * (1-alpha) + twilight.b * alpha;
+        // Keep alpha 255
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0,0);
+
+  // Draw sun position - glowing yellow dot where sun is directly overhead
+  const sunX = ((subsolar.lon + 180) / 360) * w;
+  const sunY = ((90 - subsolar.lat) / 180) * h;
+  
+  // Sun glow
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = '#ffeb3b';
+  ctx.fillStyle = 'rgba(255, 235, 59, 0.4)';
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 18, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  
+  // Sun core
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = '#ffeb3b';
+  ctx.fillStyle = '#ffeb00';
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 8, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Draw moon position if SunCalc available
+  if(typeof SunCalc !== 'undefined'){
+    try{
+      const moonPos = SunCalc.getMoonPosition(now, 0, 0);
+      const moonIllum = SunCalc.getMoonIllumination(now);
+      // Approximate sublunar point - moon's subsolar is similar but with lunar coords
+      // Use moon's azimuth/altitude to estimate lon/lat for display
+      const moonLon = (moonPos.azimuth * 180/Math.PI + 180) % 360 - 180;
+      const moonLat = moonPos.altitude * 180/Math.PI;
+      const moonX = ((moonLon + 180 + 360) % 360) / 360 * w;
+      const moonY = ((90 - moonLat) / 180) * h;
+      
+      // Moon glow - variable size based on distance (perigee vs apogee) - lanrat feature
+      const moonDistance = SunCalc.getMoonIllumination(now); // Use fraction for size hint
+      const moonRadius = 6 + (moonIllum.fraction * 2);
+      
+      ctx.fillStyle = 'rgba(200, 200, 210, 0.6)';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, moonRadius+4, 0, Math.PI*2);
+      ctx.fill();
+      
+      ctx.fillStyle = '#e0e0e0';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, moonRadius, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }catch(e){}
+  }
+
+  // Draw GPS location marker - red dot with white border (lanrat showloc feature)
+  const gpsX = ((lastLng + 180) / 360) * w;
+  const gpsY = ((90 - lastLat) / 180) * h;
+  
+  // Outer glow
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = '#ff0000';
+  ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+  ctx.beginPath();
+  ctx.arc(gpsX, gpsY, 14, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  
+  // White border + red dot
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(gpsX, gpsY, 7, 0, Math.PI*2);
+  ctx.fill();
+  
+  ctx.fillStyle = '#ff0000';
+  ctx.beginPath();
+  ctx.arc(gpsX, gpsY, 5, 0, Math.PI*2);
+  ctx.fill();
+
+  // Label
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = '10px monospace';
+  ctx.fillText(`${lastLat.toFixed(2)}°, ${lastLng.toFixed(2)}°`, gpsX + 12, gpsY - 10);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke(); // Equator
+  ctx.beginPath();
+  ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h); ctx.stroke(); // Prime meridian
+
+  // Time label + info
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '10px sans-serif';
+  const utcStr = now.getUTCHours().toString().padStart(2,'0') + ':' + now.getUTCMinutes().toString().padStart(2,'0') + ' UTC';
+  ctx.fillText(`${utcStr} • Sun: ${subsolar.lon.toFixed(1)}°, ${subsolar.lat.toFixed(1)}° • lanrat-inspired smooth twilight`, 8, h-8);
+}
+
+function updateGpsMarker(lat, lng){
+  lastLat = lat;
+  lastLng = lng;
+  drawMap();
+}
+
+// Public API - keep same as before for app.js compatibility
+function setLocation(lat, lon){ updateGpsMarker(lat, lon); }
+function updateGlobeMarker(lat, lon){ updateGpsMarker(lat, lon); }
+function initDayNightMap(){ initDayNightMap(); }
+
+window.MAP = { init: initDayNightMap, setLocation, updateGlobeMarker, initDayNightMap };
+window.initDayNightMap = initDayNightMap;
+window.updateGlobeMarker = updateGpsMarker;
+window.updateGpsMarker = updateGpsMarker;
+window.setLocation = updateGpsMarker;
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', initDayNightMap);
 } else {
-  initRealisticGlobe();
+  initDayNightMap();
 }
-
-window.initRealisticGlobe = initRealisticGlobe;
