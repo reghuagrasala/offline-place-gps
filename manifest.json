@@ -1,7 +1,7 @@
 {
-  "name": "Your Place Data",
+  "name": "Your Place Data - Fixed",
   "short_name": "PlaceData",
-  "description": "Real-time GPS, DIGIPIN, Sky & Day/Night map – works online and partially offline",
+  "description": "Real-time GPS, DIGIPIN correct dynamic, realistic globe, moon SVG live",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -21,7 +21,9 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["navigation", "utilities", "weather"],
-  "screenshots": [],
-  "prefer_related_applications": false
+  "categories": [
+    "navigation",
+    "utilities",
+    "weather"
+  ]
 }
