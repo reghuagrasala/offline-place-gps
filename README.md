@@ -1,92 +1,34 @@
-# Your Place Data
 
-Real-time GPS metrics, DIGIPIN (India Post), Sky / Astronomy data and a live Day/Night world map.
+# Your Place Data - Final Deployment - Lanrat Day/Night Map + Big Moon
 
-**Works online + partially offline** as a Progressive Web App.
-
-## Features
-
-- **GPS Metrics** (2-column metallic cards matching the original design)
-  - DIGIPIN (client-side, fully offline)
-  - Longitude / Latitude
-  - Elevation
-  - Heading – tap the card to activate live DeviceOrientation compass (short glowing green arrow)
-  - Accuracy
-  - Date / Time
-- **Day / Night Map** – canvas-based terminator (offline capable)
-- **Sky Data**
-  - Current Moon (phase + illumination + size)
-  - Sunrise / Sunset
-  - Moonrise / Moonset
-  - Moon Phase
-  - Day Length
-  - Solar Noon
-  - Sun Altitudes
-- **Sky Events** – horizontal scroll of current-period events
-- **PWA**
-  - Installable
-  - Service Worker with cache-first for assets + network-first for live data
-  - Last-known GPS & sky data stored in localStorage for offline use
-  - Periodic update support when online
-
-
-## Flight mode / Travel / Abroad
-
-The app is designed to remain useful with zero network:
-
-- **Heading / Compass** – fully live via device sensors (works in airplane mode)
-- **Last GPS fix** – kept and shown (many aircraft allow GPS near windows)
-- **DIGIPIN** – works only inside India; shows “OUTSIDE INDIA” when travelling abroad
-- **Moon phase, illumination, size** – pure math, always live
-- **Sunrise / Sunset / Day length / Solar noon** – calculated on-device for any location on Earth
-- **Day/Night map** – terminator moves with real sun position offline
-- **Date & Time** – device clock (respects local timezone while travelling)
-
-Weather, reverse-geocoding and fresh event catalogues require a connection and will simply keep the last cached values until you are back online.
+## What's included
+- Realtime day/night map inspired by https://github.com/lanrat/day-night-map
+  - Canvas pixel-level rendering with smooth twilight gradients (civil -6°, nautical -12°, astronomical -18°)
+  - Solar position glowing yellow dot where sun directly overhead
+  - Lunar position variable size based on distance
+  - GPS red dot with white border (showloc feature)
+  - Equirectangular projection, updates every 60 seconds
+  - Uses SunCalc library (already included via CDN)
+- Big Moon SVG tab: 160px realistic moon using Rx arc technique (known new moon Jan 6 2000, synodic 29.530588853, Rx + sweepFlag)
+- Bottom exactly like screenshot: metallic light cards radius 18px, dark scrollable Sky Events cards, Clear Offline Data red button
+- Heading tap activate compass preserved
+- DIGIPIN dynamic correct official grid
+- All results dynamic
 
 ## Deploy to Cloudflare Pages
+1. Unzip this folder
+2. Upload entire contents to Cloudflare Pages project root (or Workers & Pages)
+3. Ensure icons folder exists with icon-192.png and icon-512.png
+4. No build step needed - static PWA
 
-1. Push this repository to GitHub.
-2. In Cloudflare Dashboard → Pages → Create project → Connect to Git.
-3. Build settings:
-   - Framework preset: None
-   - Build command: (leave empty)
-   - Build output directory: `/` (or root)
-4. Deploy.
+## Features
+- Works offline / flight mode
+- GPS: navigator.geolocation.watchPosition
+- Sky: SunCalc + open-meteo fallback
+- Map: lanrat-inspired canvas, no amCharts dependency
+- PWA: manifest.json + service-worker.js caches assets
 
-The site is 100 % static – no Node build required.
-
-## Local testing
-
-```bash
-# Any static server
-npx serve .
-# or
-python3 -m http.server 8080
-```
-
-Open on a phone (or desktop with sensor emulation) for best GPS + compass experience.
-
-## Icons / Thumbnails
-
-Place `icon-192.png` and `icon-512.png` in the `icons/` folder  
-(or generate them from any 512×512 source).  
-
-Open Graph / Twitter meta tags already point to these for rich previews and Cloudflare thumbnail generation.
-
-## Data sources
-
-- Geolocation API + DeviceOrientation API (client)
-- DIGIPIN – pure client-side algorithm
-- Open-Meteo (free, no API key) for sunrise/sunset/day length
-- Client-side moon-phase approximation + cache for offline
-- Canvas day/night terminator (no external map tiles required)
-
-## Browser support
-
-Modern mobile browsers (iOS Safari, Chrome Android).  
-Heading requires a secure context (HTTPS) and user gesture on iOS.
-
----
-
-Built for Cloudflare Pages · Offline-first · No backend required
+## License
+- Your PWA: your license
+- lanrat/day-night-map inspiration: original GPL-3.0 - if you copy its code directly, keep GPL-3.0 LICENSE. This deployment uses original MIT rewrite inspired by its concepts.
+- SunCalc: BSD

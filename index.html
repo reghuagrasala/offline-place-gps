@@ -4,45 +4,67 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
   <meta name="theme-color" content="#0a0a0a" />
-  <meta name="description" content="Your Place Data – GPS, DIGIPIN, Sky & Realistic Day/Night globe. Works online and offline." />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta property="og:title" content="Your Place Data" />
-  <meta property="og:description" content="Real-time GPS, DIGIPIN, sky data and realistic day/night Earth globe with moon phase SVG" />
-  <meta property="og:type" content="website" />
-  <meta property="og:image" content="icons/icon-512.png" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:image" content="icons/icon-512.png" />
+  <meta name="description" content="Your Place Data – GPS, DIGIPIN, Sky & Day/Night map with amCharts. Works offline." />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <title>Your Place Data - Fixed</title>
+  <title>Your Place Data</title>
   <link rel="stylesheet" href="css/styles.css" />
+  <!-- amCharts 5 for Day and Night World Map -->
+  <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/map.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/geodata/worldLow.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.js"></script>
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
   <div id="app">
-    <div class="header-card"><h1>Your Place Data</h1></div>
-    <div id="status" class="status-bar">Starting…</div>
-    <div class="section-bar">GPS Metrics • DIGIPIN Dynamic • First Tab</div>
+    <!-- Header with dynamic wallpaper -->
+    <div class="header-card" id="header-card">
+      <h1>Your Place Data</h1>
+    </div>
+
+    <div id="status" class="status-bar online">Starting…</div>
+
+    <!-- GPS Metrics -->
+    <div class="section-bar">GPS Metrics</div>
+
     <div class="metrics-grid">
-      <div class="metric-card full digipin-card" id="digipin-card" title="DIGIPIN - 10-digit geocode for 4x4m area, client-side, offline">
-        <div class="label">DIGIPIN • 10-digit • 4x4m • Fetched</div>
-        <div class="value" id="val-digipin">X X X X X X X X X X • fetching...</div>
+      <div class="metric-card full digipin-card">
+        <div class="label">DIGIPIN</div>
+        <div class="value" id="val-digipin">X X X X X X X X X X</div>
       </div>
       <div class="metric-card"><div class="label">Longitude</div><div class="value" id="val-lon">--</div><div class="icon">📍</div></div>
       <div class="metric-card"><div class="label">Latitude</div><div class="value" id="val-lat">--</div><div class="icon">🌐</div></div>
       <div class="metric-card"><div class="label">Elevation</div><div class="value" id="val-elev">--</div><div class="icon">⛰️</div></div>
-      <div class="metric-card heading-card" id="heading-card" title="Tap to activate live compass - works in flight mode"><div class="label">Heading</div><div class="value" id="val-heading">--°</div><div class="arrow-wrap"><div class="heading-arrow" id="heading-arrow"></div></div></div>
+      <div class="metric-card heading-card" id="heading-card" title="Tap to activate live compass - works in flight mode">
+        <div class="label">Heading • Tap to activate</div>
+        <div class="value" id="val-heading">--°</div>
+        <div class="arrow-wrap"><div class="heading-arrow" id="heading-arrow"></div></div>
+      </div>
       <div class="metric-card"><div class="label">Accuracy</div><div class="value" id="val-accuracy">--</div><div class="icon">🎯</div></div>
       <div class="metric-card"><div class="label">Date</div><div class="value" id="val-date">--</div><div class="icon">📅</div></div>
       <div class="metric-card full"><div class="label">Time</div><div class="value" id="val-time">--</div><div class="icon">🕒</div></div>
     </div>
-    <div class="map-card"><canvas id="dayNightMap"></canvas><div class="map-overlay-desc"><b>Realistic 3D Globe:</b> Day/night texture blending with realistic terminator. Sun position based on month and time of day. Drag to rotate, scroll to zoom. Uses custom GLSL shaders for day/night blending - approach from zebiv-code/earth_globe (MIT, vanilla WebGL). Textures from Wikimedia/NASA Blue Marble. No amCharts - only realistic globe.</div></div>
-    <div class="section-bar">Sky Data • Accurate • Moon Rise After 1AM Fixed</div>
+
+    <!-- amCharts Day and Night World Map in place of unclear globe -->
+    <div class="map-card">
+      <div id="chartdiv"></div>
+      <div class="map-overlay-desc">Live Day/Night • Yellow dot = sun overhead • Drag to rotate • GPS red dot • amCharts 5 Equal Earth • Night = 3 overlayed geo circles 90° 84° 78°</div>
+    </div>
+
+    <!-- Sky Data -->
+    <div class="section-bar">Sky Data</div>
+
     <div class="sky-grid">
-      <div class="sky-card full" id="moon-card"><div class="label">Current Moon • Realtime SVG</div><div class="value" id="val-moon">Loading moon phase SVG...</div></div>
+      <!-- BIG Moon Phase SVG as another bigger tab in Sky Data -->
+      <div class="sky-card full moon-big-card" id="moon-big-card">
+        <div class="label">Current Moon • Big SVG • Realtime</div>
+        <div class="value" id="val-moon-big">
+          <div id="moon-container" style="width:160px;height:160px;"></div>
+          <div id="moon-info" style="text-align:center;"></div>
+        </div>
+      </div>
+
       <div class="sky-card"><div class="label">Sunrise</div><div class="value" id="val-sunrise">--</div></div>
       <div class="sky-card"><div class="label">Sunset</div><div class="value" id="val-sunset">--</div></div>
       <div class="sky-card"><div class="label">Moonrise</div><div class="value" id="val-moonrise">--</div></div>
@@ -52,20 +74,37 @@
       <div class="sky-card"><div class="label">Solar Noon</div><div class="value" id="val-solarnoon">--</div></div>
       <div class="sky-card"><div class="label">Sun Altitudes</div><div class="value" id="val-sunalt">--</div></div>
     </div>
+
+    <!-- Sky Events - exactly like bottom image: scrollable periodic events dark cards -->
     <div class="section-bar">Sky Events</div>
-    <div class="events-scroll" id="events-container"></div>
+    <div class="events-scroll" id="events-container">
+      <!-- Dynamic JS will fill: Draconids Meteor Shower, Partial Lunar Eclipse etc -->
+    </div>
+
     <button class="clear-data-btn" id="btn-clear-data">Clear Offline Data</button>
-    <div style="text-align:center;font-size:0.7rem;opacity:0.5;padding-bottom:20px;">Works offline · Flight mode ready · DIGIPIN correct • Globe realistic (zebiv-code) • Moon SVG live • Tap any card for details & copy<br>DIGIPIN: uses official grid F C 9 8 / J 3 2 7 / K 4 5 6 / L M P T, bounds 2.5-38.5N, 63.5-99.5E, example 28.622788,77.213033 → 39J-49L-L8T4</div>
+
+    <div style="text-align:center;font-size:0.7rem;opacity:0.5;padding-bottom:20px;">
+      Works offline · Flight mode ready · Tap any card for details & copy
+    </div>
   </div>
+
+  <!-- Detail sheet -->
   <div class="sheet-overlay" id="sheet-overlay"></div>
-  <div class="detail-sheet" id="detail-sheet"><div class="handle"></div><h3 id="detail-title">Details</h3><div class="big-value" id="detail-value">--</div><div class="desc" id="detail-desc"></div><div class="detail-actions"><button class="btn-copy" id="btn-copy">Copy</button><button class="btn-close" id="btn-close-sheet">Close</button></div></div>
+  <div class="detail-sheet" id="detail-sheet">
+    <div class="handle"></div>
+    <h3 id="detail-title">Details</h3>
+    <div class="big-value" id="detail-value">--</div>
+    <div class="desc" id="detail-desc"></div>
+    <div class="detail-actions"><button class="btn-copy" id="btn-copy">Copy</button><button class="btn-close" id="btn-close-sheet">Close</button></div>
+  </div>
   <div class="toast" id="toast">Copied</div>
+
   <script src="js/storage.js"></script>
   <script src="js/digipin.js"></script>
   <script src="js/fallback.js"></script>
   <script src="js/gps.js"></script>
   <script src="js/sky.js"></script>
-  <script src="js/map.js"></script>
+  <script src="js/map-amcharts.js"></script>
   <script src="js/detail.js"></script>
   <script src="js/app.js"></script>
   <script src="js/sw-register.js"></script>

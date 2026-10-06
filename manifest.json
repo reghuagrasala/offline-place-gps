@@ -1,29 +1,20 @@
 {
-  "name": "Your Place Data - Fixed",
+  "name": "Your Place Data - Day/Night Map",
   "short_name": "PlaceData",
-  "description": "Real-time GPS, DIGIPIN correct dynamic, realistic globe, moon SVG live",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
   "icons": [
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
-  ],
-  "categories": [
-    "navigation",
-    "utilities",
-    "weather"
   ]
 }
