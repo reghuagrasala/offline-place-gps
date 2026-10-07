@@ -137,7 +137,7 @@
             filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.8));
         }
 
-        /* LIVE DAY/NIGHT GLOBE CONTAINER WITH AUTO-FIT */
+        /* 3D LIVE DAY/NIGHT GLOBE CONTAINER */
         .map-wrapper {
             width: 100%;
             aspect-ratio: 2 / 1; 
@@ -153,6 +153,29 @@
             width: 100%;
             height: 100%;
             display: block;
+        }
+
+        /* GPS RESET BUTTON OVERLAY */
+        .globe-reset-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 5px 10px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            z-index: 10;
+            transition: background 0.2s;
+        }
+
+        .globe-reset-btn:active {
+            background: var(--accent-cyan);
+            color: #fff;
         }
 
         .scrollable-events {
@@ -331,9 +354,10 @@
             </div>
         </div>
 
-        <!-- 3D Live Day/Night Globe Container -->
+        <!-- 3D Live Day/Night Globe Container with Reset Button -->
         <div class="map-wrapper" id="mapContainer">
             <div id="globeViz"></div>
+            <button class="globe-reset-btn" id="resetGlobeBtn">📍 Reset to GPS</button>
         </div>
 
         <div class="section-label">Sky Data</div>
@@ -384,7 +408,6 @@
 
         const container = document.getElementById('mapContainer');
         
-        // Initialize Globe with bump maps for 3D terrain depth
         const world = Globe()
             (document.getElementById('globeViz'))
             .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
@@ -393,40 +416,45 @@
             .width(container.clientWidth)
             .height(container.clientHeight);
 
-        world.pointOfView({ lat: 10.5, lng: 76.2, altitude: 2.2 });
+        // Initial view centered on GPS coordinates
+        window.resetGlobeView = () => {
+            world.pointOfView({ lat: window.currentLat || 10.545894, lng: window.currentLon || 76.224575, altitude: 2.2 }, 1000);
+        };
+        resetGlobeView();
 
-        // Add real-time Day/Night lighting (Directional Sun Light)
+        document.getElementById('resetGlobeBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            resetGlobeView();
+        });
+
+        // True Day/Night Lighting Setup (Low ambient to ensure shadows are dark)
         const scene = world.scene();
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
-        scene.add(sunLight);
-
-        // Ambient light for dark side visibility
-        const ambientLight = new THREE.AmbientLight(0x333333, 0.4);
+        const ambientLight = new THREE.AmbientLight(0x111111, 0.15); 
         scene.add(ambientLight);
 
-        // Update sun position based on UTC time and seasonal declination
+        const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        scene.add(sunLight);
+
         function updateSunPosition() {
             const now = new Date();
-            const hours = now.getUTCHours() + now.getUTCMinutes() / 60;
-            // Calculate approximate solar longitude based on UTC hours
+            const hours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
             const sunLng = (12 - hours) * 15; 
             const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
             const sunLat = -23.44 * Math.cos((360 / 365 * (dayOfYear + 10)) * (Math.PI / 180));
 
-            // Convert spherical solar coordinates to 3D Cartesian coordinates for Three.js
-            const distance = 300;
+            const distance = 400;
             const phi = (90 - sunLat) * (Math.PI / 180);
             const theta = (sunLng + 180) * (Math.PI / 180);
 
-            sunLight.position.x = -(distance * Math.sin(phi) * Math.cos(theta));
+            sunLight.position.x = distance * Math.sin(phi) * Math.cos(theta);
             sunLight.position.y = distance * Math.cos(phi);
             sunLight.position.z = distance * Math.sin(phi) * Math.sin(theta);
         }
 
         updateSunPosition();
-        setInterval(updateSunPosition, 60000); // Refresh light angle every minute
+        setInterval(updateSunPosition, 10000);
 
-        // Robust Auto-Fit Observer for laptop & mobile resize/rotation
+        // Robust Auto-Fit Observer for resizing and device rotation
         const resizeObserver = new ResizeObserver(entries => {
             for (let entry of entries) {
                 world.width(entry.contentRect.width);
@@ -437,9 +465,9 @@
     </script>
 
     <script>
-        // Compass Engine
-        let currentLat = 10.545894;
-        let currentLon = 76.224575;
+        // Global coordinates for GPS reset access
+        window.currentLat = 10.545894;
+        window.currentLon = 76.224575;
         let smoothedHeading = 0;
         const EMA_ALPHA = 0.18; 
 
@@ -506,7 +534,7 @@
         }
 
         function updateSkyMetrics() {
-            const metrics = calculateSkyMetrics(currentLat, currentLon);
+            const metrics = calculateSkyMetrics(window.currentLat, window.currentLon);
             document.getElementById('sunriseVal').textContent = metrics.sunrise;
             document.getElementById('sunsetVal').textContent = metrics.sunset;
             document.getElementById('moonriseVal').textContent = metrics.moonrise;
@@ -594,10 +622,10 @@
         // Geolocation with Corrected Elevation Fallback
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition((pos) => {
-                currentLat = pos.coords.latitude; 
-                currentLon = pos.coords.longitude;
-                document.getElementById('latVal').textContent = `${currentLat.toFixed(6)}° ${currentLat >= 0 ? 'N' : 'S'}`;
-                document.getElementById('lonVal').textContent = `${currentLon.toFixed(6)}° ${currentLon >= 0 ? 'E' : 'W'}`;
+                window.currentLat = pos.coords.latitude; 
+                window.currentLon = pos.coords.longitude;
+                document.getElementById('latVal').textContent = `${window.currentLat.toFixed(6)}° ${window.currentLat >= 0 ? 'N' : 'S'}`;
+                document.getElementById('lonVal').textContent = `${window.currentLon.toFixed(6)}° ${window.currentLon >= 0 ? 'E' : 'W'}`;
                 
                 const validAlt = (pos.coords.altitude !== null && !isNaN(pos.coords.altitude) && pos.coords.altitude !== 0) 
                     ? Math.round(pos.coords.altitude) 
