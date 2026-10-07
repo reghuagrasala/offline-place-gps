@@ -3,8 +3,8 @@
   "short_name": "Place GPS",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0a0c10",
-  "theme_color": "#0a0c10",
+  "background_color": "#0a0d12",
+  "theme_color": "#0a0d12",
   "orientation": "portrait",
   "icons": [
     {

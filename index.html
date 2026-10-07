@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0a0c10">
+    <meta name="theme-color" content="#0a0d12">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Place & Sky Telemetry</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <style>
         :root {
             --bg-base: #0a0d12;
-            /* Lighter, silvery metallic gradient for the tabs */
-            --silver-surface: linear-gradient(145deg, #47505c 0%, #2a3038 100%);
-            --silver-border: rgba(226, 232, 240, 0.45);
-            --silver-border-specular: rgba(255, 255, 255, 0.2);
+            --silver-surface: linear-gradient(145deg, #373e4a 0%, #1f242c 100%);
+            --silver-border: rgba(226, 232, 240, 0.40);
+            --silver-border-specular: rgba(255, 255, 255, 0.12);
             --text-silver-bright: #ffffff;
             --text-silver-dim: #cbd5e1;
             --text-silver-label: #e2e8f0;
@@ -28,22 +29,21 @@
         }
 
         html, body {
-            width: 100vw;
+            width: 100%; 
             min-height: 100vh;
             background: var(--bg-base);
             color: var(--text-silver-bright);
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-            overflow-x: hidden;
+            overflow-x: hidden; 
             overflow-y: auto;
-            /* Reduced top empty space */
-            padding: calc(env(safe-area-inset-top, 20px) + 2px) 14px calc(env(safe-area-inset-bottom, 20px) + 20px) 14px;
+            overscroll-behavior-y: none; 
+            padding: calc(env(safe-area-inset-top, 20px) + 2px) 14px calc(env(safe-area-inset-bottom, 20px) + 10px) 14px;
         }
 
-        /* TALLER HEADER BANNER */
         .header-banner {
             background: linear-gradient(135deg, #0284c7, #38bdf8);
             border-radius: 16px;
-            padding: 28px 14px; /* Increased vertical padding for taller wallpaper feel */
+            padding: 28px 14px;
             text-align: center;
             font-weight: 800;
             font-size: 24px;
@@ -103,7 +103,6 @@
             text-overflow: ellipsis;
         }
 
-        /* CLEAN COMPASS CELL */
         .heading-cell {
             position: relative;
             cursor: pointer;
@@ -119,10 +118,9 @@
             filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.8));
         }
 
-        /* SHRUNK & CONTAINED LIVE MAP */
         .map-wrapper {
             width: 100%;
-            height: 140px; /* Smaller, focused box */
+            aspect-ratio: 2 / 1; 
             border-radius: 14px;
             overflow: hidden;
             background: #0f131a;
@@ -135,25 +133,24 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 182%; /* Force iframe to be larger */
-            height: 182%;
-            transform: scale(0.55); /* Shrink it down to fit the box perfectly */
-            transform-origin: 0 0;
+            width: 800px; 
+            height: 400px;
+            transform-origin: top left;
             border: none;
-            pointer-events: none; /* Disable map scrolling so page scrolling works */
+            pointer-events: none; 
         }
 
-        /* SCROLLABLE SKY EVENTS BOX */
         .scrollable-events {
-            max-height: 160px; /* Restrict height */
-            overflow-y: auto;  /* Enable vertical scrolling */
+            max-height: 160px;
+            overflow-y: auto;
+            overscroll-behavior-y: contain; 
             padding-right: 4px;
         }
 
-        /* Custom subtle scrollbar for the events list */
         .scrollable-events::-webkit-scrollbar {
             width: 4px;
         }
+        
         .scrollable-events::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.3);
             border-radius: 4px;
@@ -223,7 +220,6 @@
         <div class="card heading-cell" id="headingBtn" onclick="requestCompassPermission()">
             <div class="label">Heading</div>
             <div class="val" id="headingVal">307°</div>
-            <!-- Compass with 'N' embedded at the top -->
             <svg class="compass-arrow" id="compassArrow" viewBox="0 0 24 24" fill="none">
                 <polygon points="12,4 17,22 12,17 7,22" fill="#22c55e" stroke="#ffffff" stroke-width="1.2"/>
                 <text x="12" y="3.5" font-size="5" fill="#ffffff" text-anchor="middle" font-weight="900" font-family="sans-serif">N</text>
@@ -253,9 +249,9 @@
         </div>
     </div>
 
-    <!-- Scaled Live Map -->
-    <div class="map-wrapper">
+    <div class="map-wrapper" id="mapContainer">
         <iframe class="map-iframe" 
+                id="mapFrame"
                 src="https://www.timeanddate.com/scripts/sunmap.php" 
                 scrolling="no"></iframe>
     </div>
@@ -296,7 +292,6 @@
     </div>
 
     <div class="section-label">Sky Events</div>
-    <!-- Scrollable Box for Events -->
     <div class="card full-width scrollable-events">
         <div class="events-list" id="eventsList"></div>
     </div>
@@ -409,7 +404,31 @@
             document.getElementById('dateVal').textContent = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }, 1000);
 
-        window.onload = () => { renderEvents(); updateSkyMetrics(); requestCompassPermission(); };
+        window.addEventListener('load', () => {
+            renderEvents(); 
+            updateSkyMetrics(); 
+            requestCompassPermission();
+
+            const container = document.getElementById("mapContainer");
+            const iframe = document.getElementById("mapFrame");
+            const NATIVE_WIDTH = 800; 
+
+            if (container && window.ResizeObserver) {
+                const resizeObserver = new ResizeObserver(entries => {
+                    for (let entry of entries) {
+                        const scaleFactor = entry.contentRect.width / NATIVE_WIDTH;
+                        iframe.style.transform = `scale(${scaleFactor})`;
+                    }
+                });
+                resizeObserver.observe(container);
+            }
+        });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(console.warn);
+            });
+        }
     </script>
 </body>
 </html>

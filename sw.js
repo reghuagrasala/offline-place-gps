@@ -1,4 +1,4 @@
-const CACHE_NAME = 'offline-place-gps-v2';
+const CACHE_NAME = 'offline-place-gps-v3';
 const STATIC_ASSETS = [
     './',
     './index.html',
@@ -33,7 +33,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-    // Only intercept local requests, ignore third-party iframe fetches
     if (event.request.url.startsWith(self.location.origin)) {
         event.respondWith(
             caches.match(event.request).then((cachedResponse) => {
