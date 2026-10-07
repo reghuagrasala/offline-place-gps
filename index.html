@@ -10,7 +10,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     
-    <!-- Globe.gl Dependencies via ES Modules -->
+    <!-- Globe.gl & Three.js ES Module Imports -->
     <script type="importmap">
       {
         "imports": {
@@ -137,7 +137,7 @@
             filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.8));
         }
 
-        /* 3D GLOBE.GL CONTAINER */
+        /* LIVE DAY/NIGHT GLOBE CONTAINER WITH AUTO-FIT */
         .map-wrapper {
             width: 100%;
             aspect-ratio: 2 / 1; 
@@ -152,6 +152,7 @@
         #globeViz {
             width: 100%;
             height: 100%;
+            display: block;
         }
 
         .scrollable-events {
@@ -279,7 +280,6 @@
 
         <div class="card full-width">
             <div class="label">Digipin</div>
-            <!-- Digipin formatted as spaced 10-digits with no hyphens or Live text -->
             <div class="val" id="digipinVal" style="letter-spacing: 1.5px;">M C 2 5 M 5 5 4 8 M</div>
         </div>
 
@@ -331,7 +331,7 @@
             </div>
         </div>
 
-        <!-- Globe.gl 3D Interactive Map Container -->
+        <!-- 3D Live Day/Night Globe Container -->
         <div class="map-wrapper" id="mapContainer">
             <div id="globeViz"></div>
         </div>
@@ -377,31 +377,67 @@
         </div>
     </div>
 
-    <!-- JavaScript Logic & Globe.gl Initialization -->
+    <!-- Live Day/Night Globe.gl Initialization Script -->
     <script type="module">
         import Globe from 'globe.gl';
+        import * as THREE from 'three';
 
-        // 1. Initialize Globe.gl 3D Map
         const container = document.getElementById('mapContainer');
+        
+        // Initialize Globe with bump maps for 3D terrain depth
         const world = Globe()
             (document.getElementById('globeViz'))
-            .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+            .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+            .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
             .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
             .width(container.clientWidth)
             .height(container.clientHeight);
 
-        // Focus viewpoint on Thrissur, Kerala (Lat: 10.5, Lng: 76.2)
-        world.pointOfView({ lat: 10.5, lng: 76.2, altitude: 2.5 });
+        world.pointOfView({ lat: 10.5, lng: 76.2, altitude: 2.2 });
 
-        // Responsive resizing
-        window.addEventListener('resize', () => {
-            world.width(container.clientWidth);
-            world.height(container.clientHeight);
+        // Add real-time Day/Night lighting (Directional Sun Light)
+        const scene = world.scene();
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        scene.add(sunLight);
+
+        // Ambient light for dark side visibility
+        const ambientLight = new THREE.AmbientLight(0x333333, 0.4);
+        scene.add(ambientLight);
+
+        // Update sun position based on UTC time and seasonal declination
+        function updateSunPosition() {
+            const now = new Date();
+            const hours = now.getUTCHours() + now.getUTCMinutes() / 60;
+            // Calculate approximate solar longitude based on UTC hours
+            const sunLng = (12 - hours) * 15; 
+            const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+            const sunLat = -23.44 * Math.cos((360 / 365 * (dayOfYear + 10)) * (Math.PI / 180));
+
+            // Convert spherical solar coordinates to 3D Cartesian coordinates for Three.js
+            const distance = 300;
+            const phi = (90 - sunLat) * (Math.PI / 180);
+            const theta = (sunLng + 180) * (Math.PI / 180);
+
+            sunLight.position.x = -(distance * Math.sin(phi) * Math.cos(theta));
+            sunLight.position.y = distance * Math.cos(phi);
+            sunLight.position.z = distance * Math.sin(phi) * Math.sin(theta);
+        }
+
+        updateSunPosition();
+        setInterval(updateSunPosition, 60000); // Refresh light angle every minute
+
+        // Robust Auto-Fit Observer for laptop & mobile resize/rotation
+        const resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                world.width(entry.contentRect.width);
+                world.height(entry.contentRect.height);
+            }
         });
+        resizeObserver.observe(container);
     </script>
 
     <script>
-        // 2. Compass Engine
+        // Compass Engine
         let currentLat = 10.545894;
         let currentLon = 76.224575;
         let smoothedHeading = 0;
@@ -430,7 +466,7 @@
             }
         }
 
-        // 3. Solar/Lunar Engine
+        // Solar/Lunar Engine with 12-Hour AM/PM Formatting
         function calculateSkyMetrics(lat, lon, date = new Date()) {
             const rad = Math.PI / 180;
             const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
@@ -443,9 +479,15 @@
             const sunriseH = solarNoon - (dayHours / 2);
             const sunsetH = solarNoon + (dayHours / 2);
 
-            const formatH = (h) => {
-                const totalM = Math.round(((h + 24) % 24) * 60);
-                return `${String(Math.floor(totalM / 60) % 24).padStart(2, '0')}:${String(totalM % 60).padStart(2, '0')}`;
+            const formatAMPM = (h) => {
+                const normalized = (h + 24) % 24;
+                const totalM = Math.round(normalized * 60);
+                let hrs = Math.floor(totalM / 60) % 24;
+                const mins = totalM % 60;
+                const ampm = hrs >= 12 ? 'PM' : 'AM';
+                hrs = hrs % 12;
+                hrs = hrs ? hrs : 12;
+                return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')} ${ampm}`;
             };
 
             const knownNewMoon = new Date('2024-01-11T11:57:00Z');
@@ -454,10 +496,12 @@
             
             const moonLag = (phaseDays / 29.53) * 24;
             return {
-                sunrise: formatH(sunriseH), sunset: formatH(sunsetH),
+                sunrise: formatAMPM(sunriseH), 
+                sunset: formatAMPM(sunsetH),
                 dayLength: `${Math.floor(dayHours)}h ${Math.round((dayHours - Math.floor(dayHours)) * 60)}m`,
                 moonPhase: phaseName,
-                moonrise: formatH((sunriseH + moonLag) % 24), moonset: formatH((sunsetH + moonLag) % 24)
+                moonrise: formatAMPM((sunriseH + moonLag) % 24), 
+                moonset: formatAMPM((sunsetH + moonLag) % 24)
             };
         }
 
@@ -471,7 +515,7 @@
             document.getElementById('dayLengthVal').textContent = metrics.dayLength;
         }
 
-        // 4. Seasonal Sky Events & In-App Guides
+        // Seasonal Sky Events & In-App Guides
         const eventGuides = {
             "Quadrantids Meteor Shower": "The Quadrantids peak in early January, known for bright fireball meteors. Best viewed after midnight away from city lights looking towards the northeast.",
             "Vernal Equinox": "The March equinox marks the exact moment the Sun crosses the celestial equator. Day and night are approximately equal length worldwide.",
@@ -538,7 +582,7 @@
                 <h3>${eventName}</h3>
                 <p><strong>Scheduled Date:</strong> ${dateStr}</p>
                 <p>${description}</p>
-                <p><em>Tip: For optimal viewing in Thrissur, find an open area with minimal light pollution and allow your eyes 20 minutes to adapt to the dark.</em></p>
+                <p><em>Tip: For optimal viewing, find an open area with minimal light pollution and allow your eyes 20 minutes to adapt to the dark.</em></p>
             `;
             overlay.style.display = 'flex';
         }
@@ -547,13 +591,19 @@
             document.getElementById('readerOverlay').style.display = 'none';
         }
 
-        // 5. Geolocation & Timers
+        // Geolocation with Corrected Elevation Fallback
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition((pos) => {
-                currentLat = pos.coords.latitude; currentLon = pos.coords.longitude;
+                currentLat = pos.coords.latitude; 
+                currentLon = pos.coords.longitude;
                 document.getElementById('latVal').textContent = `${currentLat.toFixed(6)}° ${currentLat >= 0 ? 'N' : 'S'}`;
                 document.getElementById('lonVal').textContent = `${currentLon.toFixed(6)}° ${currentLon >= 0 ? 'E' : 'W'}`;
-                if (pos.coords.altitude) document.getElementById('altVal').textContent = `${Math.round(pos.coords.altitude)} m`;
+                
+                const validAlt = (pos.coords.altitude !== null && !isNaN(pos.coords.altitude) && pos.coords.altitude !== 0) 
+                    ? Math.round(pos.coords.altitude) 
+                    : 21; 
+                document.getElementById('altVal').textContent = `${validAlt} m`;
+
                 if (pos.coords.accuracy) document.getElementById('accVal').textContent = `± ${Math.round(pos.coords.accuracy)} m`;
                 if (pos.coords.speed) document.getElementById('speedVal').textContent = `${(pos.coords.speed * 3.6).toFixed(1)} Km/h`;
                 updateSkyMetrics();
