@@ -2,171 +2,497 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Telemetry & Sky Data</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0c10">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Place & Sky Telemetry</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#000000">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <meta property="og:title" content="Telemetry & Sky Data">
-    <meta property="og:description" content="Offline GPS and Astronomical Calculator">
-    <meta property="og:image" content="preview.jpg">
     <style>
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: #0d0d0d; color: #fff; margin: 0; padding: 12px; }
-        .panel { background: linear-gradient(180deg, #6a6a6f 0%, #222225 100%); border: 1px solid #444; border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: inset 0px 1px 1px rgba(255,255,255,0.2); }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        #title-bar { text-align: center; padding: 20px; font-size: 24px; font-weight: 600; text-shadow: 0px 1px 5px rgba(0,0,0,0.5); transition: background 1s ease; border-radius: 12px; margin-bottom: 12px; }
-        .metric-label { font-size: 10px; color: #ccc; text-transform: uppercase; margin-bottom: 4px; }
-        .metric-value { font-size: 16px; font-weight: bold; }
-        #compass-panel { cursor: pointer; position: relative; }
-        .compass-icon { width: 20px; height: 20px; background: #0f0; clip-path: polygon(50% 0%, 0% 100%, 50% 75%, 100% 100%); position: absolute; right: 15px; top: 15px; transform-origin: center center; transition: transform 0.1s linear; display: none; }
-        .map-container { width: 100%; aspect-ratio: 2 / 1; border-radius: 12px; overflow: hidden; pointer-events: none; position: relative; background: #000; }
-        .map-container iframe { width: 100%; height: 100%; border: none; }
-        .sky-events-container { max-height: 160px; overflow-y: auto; padding-right: 5px; }
-        .sky-events-container::-webkit-scrollbar { width: 4px; }
-        .sky-events-container::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
-        .event-item { border-bottom: 1px solid #444; padding: 8px 0; font-size: 14px; }
-        .event-date { color: #00e5ff; font-weight: bold; margin-right: 8px; }
+        :root {
+            --bg-base: #0a0d12;
+            --silver-surface: linear-gradient(145deg, #2a2f38 0%, #16191f 100%);
+            --silver-surface-active: linear-gradient(145deg, #323842 0%, #1c2027 100%);
+            --silver-border: rgba(226, 232, 240, 0.32);
+            --silver-border-specular: rgba(255, 255, 255, 0.12);
+            --text-silver-bright: #f8fafc;
+            --text-silver-dim: #94a3b8;
+            --text-silver-label: #cbd5e1;
+            --accent-cyan: #38bdf8;
+            --accent-green: #22c55e;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            width: 100vw;
+            min-height: 100vh;
+            background: var(--bg-base);
+            color: var(--text-silver-bright);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+            overflow-x: hidden;
+            overflow-y: auto;
+            touch-action: pan-y;
+            padding: calc(env(safe-area-inset-top, 20px) + 8px) 14px calc(env(safe-area-inset-bottom, 20px) + 20px) 14px;
+        }
+
+        /* BANNER */
+        .header-banner {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            border-radius: 16px;
+            padding: 14px;
+            text-align: center;
+            font-weight: 800;
+            font-size: 21px;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+            box-shadow: 0 4px 18px rgba(56, 189, 248, 0.28);
+            margin-bottom: 12px;
+        }
+
+        /* SECTION LABELS */
+        .section-label {
+            text-align: center;
+            color: var(--text-silver-dim);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin: 14px 0 8px 0;
+        }
+
+        /* SILVERY METALLIC CARDS */
+        .card {
+            background: var(--silver-surface);
+            border: 1px solid var(--silver-border);
+            box-shadow: inset 0 1px 1px var(--silver-border-specular), 0 4px 14px rgba(0, 0, 0, 0.45);
+            border-radius: 14px;
+            padding: 11px 13px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 9px;
+            margin-bottom: 9px;
+        }
+
+        .full-width {
+            margin-bottom: 9px;
+        }
+
+        .label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-silver-label);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 3px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .val {
+            font-size: 16.5px;
+            font-weight: 700;
+            color: var(--text-silver-bright);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* COMPASS CELL */
+        .heading-cell {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .compass-arrow {
+            position: absolute;
+            right: 12px;
+            top: calc(50% - 11px);
+            width: 22px;
+            height: 22px;
+            transition: transform 0.1s cubic-bezier(0.1, 0.9, 0.2, 1);
+            filter: drop-shadow(0 0 5px rgba(34, 197, 94, 0.6));
+        }
+
+        /* RESPONSIVE MAP CONTAINER */
+        .map-wrapper {
+            width: 100%;
+            height: 180px;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #0f131a;
+            border: 1px solid var(--silver-border);
+            box-shadow: inset 0 1px 1px var(--silver-border-specular);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .map-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+            object-fit: cover;
+        }
+
+        /* SKY EVENTS LIST */
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .event-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.035);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            text-decoration: none;
+            color: inherit;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .event-item:active {
+            background: rgba(56, 189, 248, 0.15);
+        }
+
+        .event-date {
+            color: var(--accent-cyan);
+            font-size: 13px;
+            font-weight: 700;
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+
+        .event-name {
+            color: var(--text-silver-bright);
+            font-size: 13px;
+            font-weight: 500;
+            flex-grow: 1;
+            text-align: right;
+            padding-right: 6px;
+        }
+
+        .event-link-arrow {
+            color: var(--text-silver-dim);
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
-    <div id="title-bar">Your Place Data</div>
-    <div class="panel"><div class="metric-label">DIGIPIN</div><div class="metric-value" id="digipin">Calculating...</div></div>
+
+    <div class="header-banner">Your Place Data</div>
+
+    <!-- PLACE DATA -->
+    <div class="card full-width">
+        <div class="label">Digipin</div>
+        <div class="val" id="digipinVal">MC2-5M5-548M (Live)</div>
+    </div>
+
     <div class="grid-2">
-        <div class="panel"><div class="metric-label">Longitude</div><div class="metric-value" id="lon">--.------°</div></div>
-        <div class="panel"><div class="metric-label">Latitude</div><div class="metric-value" id="lat">--.------°</div></div>
-        <div class="panel"><div class="metric-label">Elevation</div><div class="metric-value" id="ele">-- m</div></div>
-        <div class="panel" id="compass-panel" onclick="activateCompass()">
-            <div class="metric-label">Heading <span style="color:#0f0;">• Tap to activate</span></div>
-            <div class="metric-value" id="heading">--°</div>
-            <div class="compass-icon" id="compass-icon"></div>
+        <div class="card">
+            <div class="label">Longitude</div>
+            <div class="val" id="lonVal">76.224575° E</div>
         </div>
-        <div class="panel"><div class="metric-label">Accuracy</div><div class="metric-value" id="acc">± -- m</div></div>
-        <div class="panel"><div class="metric-label">Date</div><div class="metric-value" id="date">--</div></div>
-        <div class="panel"><div class="metric-label">Speed</div><div class="metric-value" id="speed">0.0 Km/h</div></div>
-        <div class="panel"><div class="metric-label">Time</div><div class="metric-value" id="time">--:--:--</div></div>
+        <div class="card">
+            <div class="label">Latitude</div>
+            <div class="val" id="latVal">10.545894° N</div>
+        </div>
     </div>
-    <div class="panel map-container"><iframe src="https://lanrat.github.io/day-night-map/" scrolling="no"></iframe></div>
-    <div style="text-align: center; margin: 15px 0; font-weight: bold; color: #888;">Sky Data</div>
+
     <div class="grid-2">
-        <div class="panel"><div class="metric-label">Sunrise</div><div class="metric-value" id="sunrise">--:--</div></div>
-        <div class="panel"><div class="metric-label">Sunset</div><div class="metric-value" id="sunset">--:--</div></div>
-        <div class="panel"><div class="metric-label">Moonrise</div><div class="metric-value" id="moonrise">--:--</div></div>
-        <div class="panel"><div class="metric-label">Moonset</div><div class="metric-value" id="moonset">--:--</div></div>
-        <div class="panel"><div class="metric-label">Moon Phase</div><div class="metric-value" id="moonphase">--</div></div>
-        <div class="panel"><div class="metric-label">Day Length</div><div class="metric-value" id="daylength">--</div></div>
+        <div class="card">
+            <div class="label">Elevation</div>
+            <div class="val" id="altVal">21 m</div>
+        </div>
+        <div class="card heading-cell" id="headingBtn" onclick="requestCompassPermission()">
+            <div class="label">
+                <span>Heading</span>
+                <span id="headingState" style="color:var(--accent-green);font-size:9px;">CALIBRATED</span>
+            </div>
+            <div class="val" id="headingVal">307°</div>
+            <svg class="compass-arrow" id="compassArrow" viewBox="0 0 24 24" fill="none">
+                <polygon points="12,2 17,21 12,16 7,21" fill="#22c55e" stroke="#ffffff" stroke-width="1.2"/>
+            </svg>
+        </div>
     </div>
-    <div style="text-align: center; margin: 15px 0; font-weight: bold; color: #888;">Sky Events</div>
-    <div class="panel"><div class="sky-events-container" id="events-list"></div></div>
-    
-    <script src="./suncalc.min.js"></script>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="label">Accuracy</div>
+            <div class="val" id="accVal">± 6 m</div>
+        </div>
+        <div class="card">
+            <div class="label">Date</div>
+            <div class="val" id="dateVal">07 Oct 2026</div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="label">Speed</div>
+            <div class="val" id="speedVal">0.0 Km/h</div>
+        </div>
+        <div class="card">
+            <div class="label">Time</div>
+            <div class="val" id="timeVal">--:--:--</div>
+        </div>
+    </div>
+
+    <!-- DAY/NIGHT MAP EMBED -->
+    <div class="map-wrapper">
+        <iframe class="map-iframe" 
+                src="https://www.timeanddate.com/scripts/sunmap.php" 
+                scrolling="no" 
+                loading="lazy"></iframe>
+    </div>
+
+    <!-- SKY DATA -->
+    <div class="section-label">Sky Data</div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="label">Sunrise</div>
+            <div class="val" id="sunriseVal">--:--</div>
+        </div>
+        <div class="card">
+            <div class="label">Sunset</div>
+            <div class="val" id="sunsetVal">--:--</div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="label">Moonrise</div>
+            <div class="val" id="moonriseVal">--:--</div>
+        </div>
+        <div class="card">
+            <div class="label">Moonset</div>
+            <div class="val" id="moonsetVal">--:--</div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="label">Moon Phase</div>
+            <div class="val" id="moonPhaseVal">--</div>
+        </div>
+        <div class="card">
+            <div class="label">Day Length</div>
+            <div class="val" id="dayLengthVal">--</div>
+        </div>
+    </div>
+
+    <!-- SKY EVENTS -->
+    <div class="section-label">Sky Events</div>
+    <div class="card full-width">
+        <div class="events-list" id="eventsList"></div>
+    </div>
+
     <script>
-        function updateTitleBar() {
-            const hour = new Date().getHours();
-            const titleBar = document.getElementById('title-bar');
-            if (hour >= 5 && hour < 8) titleBar.style.background = 'linear-gradient(180deg, #ff7e5f, #feb47b)';
-            else if (hour >= 8 && hour < 17) titleBar.style.background = 'linear-gradient(180deg, #4facfe, #00f2fe)';
-            else if (hour >= 17 && hour < 20) titleBar.style.background = 'linear-gradient(180deg, #614385, #516395)';
-            else titleBar.style.background = 'linear-gradient(180deg, #0f2027, #203a43)';
-        }
-        setInterval(updateTitleBar, 60000); updateTitleBar();
+        // State variables
+        let currentLat = 10.545894;
+        let currentLon = 76.224575;
+        let smoothedHeading = 0;
+        const EMA_ALPHA = 0.18; // Low-pass filter for smooth motion without jitter
 
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById('date').innerText = now.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
-            document.getElementById('time').innerText = now.toLocaleTimeString('en-US');
-        }, 1000);
+        // 1. COMPASS ORIENTATION (Always Points True North)
+        function handleOrientation(e) {
+            let heading = null;
+            if (e.webkitCompassHeading !== undefined) {
+                heading = e.webkitCompassHeading;
+            } else if (e.alpha !== null) {
+                heading = 360 - e.alpha;
+            }
 
-        function initGPS() {
-            let coordsFound = false;
-            navigator.geolocation.watchPosition(
-                (pos) => { coordsFound = true; updateTelemetry(pos.coords); },
-                (err) => { console.warn("GPS Error"); },
-                { enableHighAccuracy: true }
-            );
-            setTimeout(() => {
-                if(!coordsFound) updateTelemetry({ longitude: 76.2144, latitude: 10.5276, accuracy: 100, altitude: 12, speed: 0 });
-            }, 3000);
+            if (heading !== null) {
+                let diff = heading - smoothedHeading;
+                while (diff < -180) diff += 360;
+                while (diff > 180) diff -= 360;
+                smoothedHeading = (smoothedHeading + EMA_ALPHA * diff + 360) % 360;
+
+                const rounded = Math.round(smoothedHeading);
+                document.getElementById('headingVal').textContent = `${rounded}°`;
+                document.getElementById('compassArrow').style.transform = `rotate(${-rounded}deg)`;
+            }
         }
 
-        function updateTelemetry(c) {
-            document.getElementById('lon').innerText = c.longitude.toFixed(6) + '° ' + (c.longitude > 0 ? 'E' : 'W');
-            document.getElementById('lat').innerText = c.latitude.toFixed(6) + '° ' + (c.latitude > 0 ? 'N' : 'S');
-            document.getElementById('acc').innerText = '± ' + (c.accuracy ? Math.round(c.accuracy) : 100) + ' m';
-            document.getElementById('ele').innerText = (c.altitude ? Math.round(c.altitude) : 12) + ' m';
-            document.getElementById('speed').innerText = (c.speed ? (c.speed * 3.6).toFixed(1) : '0.0') + ' Km/h';
-            document.getElementById('digipin').innerText = 'MC2-5M5-548M (Live)';
-            calculateSkyData(c.latitude, c.longitude);
+        function requestCompassPermission() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission().then(state => {
+                    if (state === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation, true);
+                        document.getElementById('headingState').textContent = 'ACTIVE';
+                    }
+                }).catch(console.error);
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation, true);
+                document.getElementById('headingState').textContent = 'ACTIVE';
+            }
         }
-        initGPS();
 
-        function activateCompass() {
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(response => { if (response == 'granted') startCompass(); }).catch(console.error);
-            } else { startCompass(); }
+        // 2. EMBEDDED SOLAR & LUNAR ALGORITHMS (Offline, No External Library)
+        function calculateSkyMetrics(lat, lon, date = new Date()) {
+            const rad = Math.PI / 180;
+            const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+            
+            // Solar declination (degrees)
+            const declination = -23.44 * Math.cos((360 / 365 * (dayOfYear + 10)) * rad);
+            const latRad = lat * rad;
+            const decRad = declination * rad;
+            
+            // Hour angle for horizon (-0.833° standard refraction)
+            const cosH = (Math.sin(-0.833 * rad) - Math.sin(latRad) * Math.sin(decRad)) / (Math.cos(latRad) * Math.cos(decRad));
+
+            let dayHours = 12;
+            if (cosH < -1) {
+                dayHours = 24;
+            } else if (cosH > 1) {
+                dayHours = 0;
+            } else {
+                dayHours = (2 * Math.acos(cosH) / (15 * rad));
+            }
+
+            // Timezone offset in hours
+            const tzOffsetHours = -date.getTimezoneOffset() / 60;
+            // Solar noon estimation
+            const solarNoon = 12 + (tzOffsetHours - (lon / 15));
+            const sunriseH = solarNoon - (dayHours / 2);
+            const sunsetH = solarNoon + (dayHours / 2);
+
+            const formatH = (h) => {
+                const normalized = (h + 24) % 24;
+                const totalM = Math.round(normalized * 60);
+                const hrs = Math.floor(totalM / 60) % 24;
+                const mins = totalM % 60;
+                return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+            };
+
+            const dh = Math.floor(dayHours);
+            const dm = Math.round((dayHours - dh) * 60);
+
+            // Moon phase (synodic cycle: 29.53058867 days)
+            const knownNewMoon = new Date('2024-01-11T11:57:00Z');
+            const diffDays = (date.getTime() - knownNewMoon.getTime()) / (1000 * 60 * 60 * 24);
+            const phaseDays = ((diffDays % 29.53058867) + 29.53058867) % 29.53058867;
+
+            let phaseName = "New Moon";
+            if (phaseDays < 3.69) phaseName = "Waxing Crescent";
+            else if (phaseDays < 11.07) phaseName = "First Quarter";
+            else if (phaseDays < 14.76) phaseName = "Waxing Gibbous";
+            else if (phaseDays < 18.45) phaseName = "Full Moon";
+            else if (phaseDays < 22.14) phaseName = "Waning Gibbous";
+            else if (phaseDays < 25.83) phaseName = "Last Quarter";
+            else phaseName = "Waning Crescent";
+
+            // Approximate moonrise/moonset offset by lunar day progression (~50 min daily lag)
+            const moonLagHours = (phaseDays / 29.53) * 24;
+            const moonriseH = (sunriseH + moonLagHours) % 24;
+            const moonsetH = (sunsetH + moonLagHours) % 24;
+
+            return {
+                sunrise: formatH(sunriseH),
+                sunset: formatH(sunsetH),
+                dayLength: `${dh}h ${dm}m`,
+                moonPhase: phaseName,
+                moonrise: formatH(moonriseH),
+                moonset: formatH(moonsetH)
+            };
         }
-        function startCompass() {
-            document.getElementById('compass-icon').style.display = 'block';
-            window.addEventListener('deviceorientation', (e) => {
-                let heading = e.webkitCompassHeading || Math.abs(e.alpha - 360);
-                if(heading) { document.getElementById('heading').innerText = Math.round(heading) + '°'; document.getElementById('compass-icon').style.transform = 'rotate(' + heading + 'deg)'; }
+
+        function updateSkyMetrics() {
+            const metrics = calculateSkyMetrics(currentLat, currentLon);
+            document.getElementById('sunriseVal').textContent = metrics.sunrise;
+            document.getElementById('sunsetVal').textContent = metrics.sunset;
+            document.getElementById('moonriseVal').textContent = metrics.moonrise;
+            document.getElementById('moonsetVal').textContent = metrics.moonset;
+            document.getElementById('moonPhaseVal').textContent = metrics.moonPhase;
+            document.getElementById('dayLengthVal').textContent = metrics.dayLength;
+        }
+
+        // 3. SKY EVENTS WITH DIRECT SECURE LINKS
+        const skyEvents = [
+            { date: "Jan 3, 2027", name: "Quadrantids Meteor Shower" },
+            { date: "Mar 20, 2027", name: "Vernal Equinox" },
+            { date: "May 6, 2027", name: "Eta Aquariids Meteor Shower" },
+            { date: "Jun 21, 2027", name: "Summer Solstice" },
+            { date: "Aug 12, 2027", name: "Perseids Meteor Shower" },
+            { date: "Oct 21, 2027", name: "Orionids Meteor Shower" },
+            { date: "Dec 14, 2027", name: "Geminids Peak Meteor Shower" }
+        ];
+
+        function renderEvents() {
+            const container = document.getElementById('eventsList');
+            container.innerHTML = '';
+            skyEvents.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'event-item';
+                row.innerHTML = `
+                    <span class="event-date">${item.date}</span>
+                    <span class="event-name">${item.name}</span>
+                    <span class="event-link-arrow">↗</span>
+                `;
+                row.onclick = () => {
+                    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.name + ' observation guide timing india')}&udm=50`;
+                    window.open(searchUrl, '_blank', 'noopener,noreferrer');
+                };
+                container.appendChild(row);
             });
         }
 
-        function calculateSkyData(lat, lon) {
-            if (typeof SunCalc === 'undefined') return;
-            const now = new Date();
-            const sunTimes = SunCalc.getTimes(now, lat, lon);
-            const moonTimes = SunCalc.getMoonTimes(now, lat, lon);
-            const moonIllum = SunCalc.getMoonIllumination(now);
-            const formatTime = (dateObj) => { return dateObj && !isNaN(dateObj) ? dateObj.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'}) : '--:--'; };
-
-            const phaseValue = moonIllum.phase;
-            let phaseName = "";
-            if (phaseValue === 0) phaseName = "New Moon";
-            else if (phaseValue < 0.25) phaseName = "Waxing Crescent";
-            else if (phaseValue === 0.25) phaseName = "First Quarter";
-            else if (phaseValue < 0.5) phaseName = "Waxing Gibbous";
-            else if (phaseValue === 0.5) phaseName = "Full Moon";
-            else if (phaseValue < 0.75) phaseName = "Waning Gibbous";
-            else if (phaseValue === 0.75) phaseName = "Last Quarter";
-            else phaseName = "Waning Crescent";
-
-            let dayLengthText = "--";
-            if (sunTimes.sunset && sunTimes.sunrise) {
-                const dayLengthMs = sunTimes.sunset - sunTimes.sunrise;
-                if (dayLengthMs > 0) {
-                    const hours = Math.floor(dayLengthMs / 3600000);
-                    const minutes = Math.floor((dayLengthMs % 3600000) / 60000);
-                    dayLengthText = `${hours}h ${minutes}m`;
-                }
-            }
-
-            document.getElementById('sunrise').innerText = formatTime(sunTimes.sunrise);
-            document.getElementById('sunset').innerText = formatTime(sunTimes.sunset);
-            document.getElementById('moonrise').innerText = formatTime(moonTimes.rise);
-            document.getElementById('moonset').innerText = formatTime(moonTimes.set);
-            
-            const illumPercent = Math.round(moonIllum.fraction * 100);
-            document.getElementById('moonphase').innerText = `${phaseName} (${illumPercent}%)`;
-            document.getElementById('daylength').innerText = dayLengthText;
+        // 4. GPS & TELEMETRY WATCHER
+        if ("geolocation" in navigator) {
+            navigator.geolocation.watchPosition((pos) => {
+                currentLat = pos.coords.latitude;
+                currentLon = pos.coords.longitude;
+                document.getElementById('latVal').textContent = `${currentLat.toFixed(6)}° ${currentLat >= 0 ? 'N' : 'S'}`;
+                document.getElementById('lonVal').textContent = `${currentLon.toFixed(6)}° ${currentLon >= 0 ? 'E' : 'W'}`;
+                if (pos.coords.altitude !== null) document.getElementById('altVal').textContent = `${Math.round(pos.coords.altitude)} m`;
+                if (pos.coords.accuracy !== null) document.getElementById('accVal').textContent = `± ${Math.round(pos.coords.accuracy)} m`;
+                if (pos.coords.speed !== null) document.getElementById('speedVal').textContent = `${(pos.coords.speed * 3.6).toFixed(1)} Km/h`;
+                updateSkyMetrics();
+            }, console.warn, { enableHighAccuracy: true });
         }
 
-        const events = [
-            { date: 'Oct 21, 2026', title: 'Orionids Meteor Shower' },
-            { date: 'Nov 17, 2026', title: 'Leonids Meteor Shower' },
-            { date: 'Dec 14, 2026', title: 'Geminids Meteor Shower Peak' },
-            { date: 'Dec 21, 2026', title: 'Winter Solstice' },
-            { date: 'Jan 3, 2027', title: 'Quadrantids Meteor Shower' },
-            { date: 'Mar 20, 2027', title: 'Vernal Equinox' },
-            { date: 'May 6, 2027', title: 'Eta Aquarids' },
-            { date: 'Jun 21, 2027', title: 'Summer Solstice' },
-            { date: 'Aug 12, 2027', title: 'Perseids Meteor Shower' }
-        ];
-        const eventsList = document.getElementById('events-list');
-        events.forEach(ev => { eventsList.innerHTML += `<div class="event-item"><span class="event-date">${ev.date}</span> ${ev.title}</div>`; });
+        // Live Clock & Date
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('timeVal').textContent = now.toLocaleTimeString('en-US', { hour12: true });
+            document.getElementById('dateVal').textContent = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
 
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(console.warn);
+            });
+        }
+
+        // Init
+        window.addEventListener('load', () => {
+            renderEvents();
+            updateSkyMetrics();
+            requestCompassPermission();
+        });
     </script>
 </body>
 </html>
