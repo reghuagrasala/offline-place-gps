@@ -33,16 +33,10 @@
             --gold: #fbbf24;
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
 
         html, body {
-            width: 100%; 
-            height: 100vh;
+            width: 100%; height: 100vh;
             background: var(--bg-base);
             color: var(--text-silver-bright);
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
@@ -50,38 +44,23 @@
         }
 
         .app-container {
-            width: 100%;
-            max-width: 650px; 
-            height: 100vh;
-            margin: 0 auto;
-            overflow-y: auto;
-            overscroll-behavior-y: contain; 
+            width: 100%; max-width: 650px; height: 100vh; margin: 0 auto;
+            overflow-y: auto; overscroll-behavior-y: contain; 
             padding: env(safe-area-inset-top) 8px calc(env(safe-area-inset-bottom) + 16px) 8px;
         }
 
         .header-banner {
             background: linear-gradient(135deg, #0284c7, #38bdf8);
-            border-radius: 16px;
-            padding: 24px 14px;
-            text-align: center;
-            font-weight: 800;
-            font-size: 24px;
-            letter-spacing: 0.5px;
-            color: #ffffff;
+            border-radius: 16px; padding: 24px 14px;
+            text-align: center; font-weight: 800; font-size: 24px;
+            letter-spacing: 0.5px; color: #ffffff;
             box-shadow: 0 4px 18px rgba(56, 189, 248, 0.28);
-            margin-bottom: 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
+            margin-bottom: 16px; display: flex; justify-content: center; align-items: center; gap: 8px;
         }
 
         .gps-pulse {
-            width: 10px;
-            height: 10px;
-            background-color: var(--bright-green);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--bright-green);
+            width: 10px; height: 10px; background-color: var(--bright-green);
+            border-radius: 50%; box-shadow: 0 0 8px var(--bright-green);
             animation: pulse 2s infinite;
         }
 
@@ -92,232 +71,105 @@
         }
 
         .section-label {
-            text-align: center;
-            color: var(--text-silver-dim);
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-            margin: 16px 0 10px 0;
+            text-align: center; color: var(--text-silver-dim); font-size: 13px;
+            font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; margin: 16px 0 10px 0;
         }
 
         .card {
-            background: var(--silver-surface);
-            border: 1px solid var(--silver-border);
+            background: var(--silver-surface); border: 1px solid var(--silver-border);
             box-shadow: inset 0 1px 1px var(--silver-border-specular), 0 4px 12px rgba(0, 0, 0, 0.5);
-            border-radius: 14px;
-            padding: 12px 14px;
+            border-radius: 14px; padding: 12px 14px;
         }
 
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px; 
-            margin-bottom: 8px;
-        }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
 
-        .grid-3 {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 6px; 
-            margin-bottom: 8px;
-        }
+        .grid-3 .card { padding: 10px 8px; display: flex; flex-direction: column; justify-content: space-between; min-height: 85px; }
+        .grid-3 .label { font-size: 9px; line-height: 1.2; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .grid-3 .val { font-size: 13.5px; }
+        .grid-3 .sub-val { font-size: 9px; color: var(--text-silver-dim); margin-top: 2px; font-weight: 500; }
 
-        .grid-3 .card {
-            padding: 10px 8px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 85px;
-        }
-
-        .grid-3 .label {
-            font-size: 9px;
-            line-height: 1.2;
-            margin-bottom: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-
-        .grid-3 .val {
-            font-size: 13.5px;
-        }
-
-        .grid-3 .sub-val {
-            font-size: 9px;
-            color: var(--text-silver-dim);
-            margin-top: 2px;
-            font-weight: 500;
-        }
-
-        .full-width {
-            margin-bottom: 8px;
-        }
+        .full-width { margin-bottom: 8px; }
 
         .label {
-            font-size: 10px;
-            font-weight: 700;
-            color: var(--text-silver-label);
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            margin-bottom: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            font-size: 10px; font-weight: 700; color: var(--text-silver-label);
+            text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px;
+            display: flex; justify-content: space-between; align-items: flex-start;
         }
 
-        .val {
-            font-size: 16.5px;
-            font-weight: 700;
-            color: var(--text-silver-bright);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+        .val { font-size: 16.5px; font-weight: 700; color: var(--text-silver-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        .card-icon {
-            width: 16px;
-            height: 16px;
-            flex-shrink: 0;
-            margin-left: 4px;
-        }
-
-        .heading-cell {
-            position: relative;
-            cursor: pointer;
-        }
+        .card-icon { width: 16px; height: 16px; flex-shrink: 0; margin-left: 4px; }
+        .heading-cell { position: relative; cursor: pointer; }
 
         .compass-arrow {
-            position: absolute;
-            right: 12px;
-            top: calc(50% - 13px);
-            width: 26px;
-            height: 26px;
-            transition: transform 0.1s cubic-bezier(0.1, 0.9, 0.2, 1);
-            filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.8));
+            position: absolute; right: 12px; top: calc(50% - 13px); width: 26px; height: 26px;
+            transition: transform 0.1s cubic-bezier(0.1, 0.9, 0.2, 1); filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.8));
         }
 
         .map-wrapper {
-            width: 100%;
-            aspect-ratio: 2 / 1; 
-            border-radius: 14px;
-            overflow: hidden;
-            background: #020617;
-            border: 1px solid var(--silver-border);
-            margin-bottom: 12px;
-            position: relative;
+            width: 100%; aspect-ratio: 2 / 1; border-radius: 14px; overflow: hidden;
+            background: #020617; border: 1px solid var(--silver-border); margin-bottom: 12px; position: relative;
         }
 
-        #globeViz {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
+        #globeViz { width: 100%; height: 100%; display: block; }
 
         .globe-reset-btn {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid var(--accent-cyan);
-            color: var(--accent-cyan);
-            padding: 5px 10px;
-            font-size: 11px;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            backdrop-filter: blur(4px);
-            z-index: 10;
+            position: absolute; bottom: 10px; right: 10px; background: rgba(15, 23, 42, 0.85);
+            border: 1px solid var(--accent-cyan); color: var(--accent-cyan); padding: 5px 10px;
+            font-size: 11px; font-weight: bold; border-radius: 6px; cursor: pointer; backdrop-filter: blur(4px); z-index: 10;
         }
 
-        .hero-moon-box {
-            display: flex;
-            align-items: center;
-            padding: 16px !important;
-            gap: 16px;
-        }
+        .hero-moon-box { display: flex; align-items: center; padding: 16px !important; gap: 16px; }
+        .moon-svg-container { width: 70px; height: 70px; flex-shrink: 0; filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2)); }
+        .hero-moon-details { display: flex; flex-direction: column; gap: 4px; }
+        .hero-moon-name { font-size: 18px; font-weight: 800; }
+        .hero-moon-illum { color: var(--gold); font-size: 13px; font-weight: 700; }
+        .hero-moon-sub { color: var(--text-silver-dim); font-size: 11px; font-weight: 500; }
 
-        .moon-svg-container {
-            width: 70px;
-            height: 70px;
-            flex-shrink: 0;
-            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2));
-        }
-
-        .hero-moon-details {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .hero-moon-name {
-            font-size: 18px;
-            font-weight: 800;
-        }
-
-        .hero-moon-illum {
-            color: var(--gold);
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .hero-moon-sub {
-            color: var(--text-silver-dim);
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .scrollable-events {
-            max-height: 160px;
-            overflow-y: auto;
-            overscroll-behavior-y: contain; 
-            padding-right: 4px;
-        }
-
+        .scrollable-events { max-height: 160px; overflow-y: auto; overscroll-behavior-y: contain; padding-right: 4px; }
         .scrollable-events::-webkit-scrollbar { width: 4px; }
-        .scrollable-events::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-        }
-
-        .events-list {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
+        .scrollable-events::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 4px; }
+        .events-list { display: flex; flex-direction: column; gap: 6px; }
 
         .event-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 12px;
-            border-radius: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            text-decoration: none;
-            color: inherit;
-            cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08); text-decoration: none; color: inherit; cursor: pointer;
         }
+        .event-date { color: var(--accent-cyan); font-size: 13px; font-weight: 700; white-space: nowrap; margin-right: 8px; }
+        .event-name { color: var(--text-silver-bright); font-size: 13px; font-weight: 500; flex-grow: 1; text-align: right; }
 
-        .event-date {
-            color: var(--accent-cyan);
-            font-size: 13px;
-            font-weight: 700;
-            white-space: nowrap;
-            margin-right: 8px;
+        /* IN-APP BROWSER */
+        #inAppBrowserOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: var(--bg-base); z-index: 99999; flex-direction: column;
         }
-
-        .event-name {
-            color: var(--text-silver-bright);
-            font-size: 13px;
-            font-weight: 500;
-            flex-grow: 1;
-            text-align: right;
+        .browser-header {
+            height: calc(env(safe-area-inset-top) + 60px); padding: env(safe-area-inset-top) 15px 0 15px; 
+            background: #1e293b; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #334155; flex-shrink: 0;
         }
+        .browser-back-btn {
+            background: var(--accent-cyan); color: #fff; border: none; padding: 8px 16px; 
+            border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer;
+        }
+        .browser-title {
+            font-weight: bold; color: #fff; font-size: 15px; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; max-width: 65%; text-align: right;
+        }
+        #inAppIframe { flex-grow: 1; width: 100%; border: none; background: #ffffff; }
     </style>
 </head>
 <body>
+
+    <div id="inAppBrowserOverlay">
+        <div class="browser-header">
+            <button class="browser-back-btn" onclick="closeInAppBrowser()">← Back</button>
+            <span class="browser-title" id="inAppBrowserTitle">Loading...</span>
+        </div>
+        <iframe id="inAppIframe" sandbox="allow-same-origin allow-scripts allow-forms" src=""></iframe>
+    </div>
 
     <div class="app-container">
         <div class="header-banner">
@@ -615,19 +467,12 @@
             const moonLag = (phaseDays / lunarCycle) * 24;
             
             return {
-                sunrise: formatAMPM(sunriseH), 
-                sunset: formatAMPM(sunsetH),
-                solarNoon: formatAMPM(solarNoon),
-                altitude: altitude.toFixed(1),
-                azimuth: azimuth.toFixed(0),
+                sunrise: formatAMPM(sunriseH), sunset: formatAMPM(sunsetH), solarNoon: formatAMPM(solarNoon),
+                altitude: altitude.toFixed(1), azimuth: azimuth.toFixed(0),
                 dayLength: `${Math.floor(dayHours)}.${Math.round((dayHours - Math.floor(dayHours)) * 10)}h`,
-                phaseName: phaseName,
-                phaseDays: phaseDays,
-                moonrise: formatAMPM((sunriseH + moonLag) % 24), 
-                moonset: formatAMPM((sunsetH + moonLag) % 24),
-                illumination: illumination,
-                age: phaseDays.toFixed(1),
-                distance: currentDist
+                phaseName: phaseName, phaseDays: phaseDays,
+                moonrise: formatAMPM((sunriseH + moonLag) % 24), moonset: formatAMPM((sunsetH + moonLag) % 24),
+                illumination: illumination, age: phaseDays.toFixed(1), distance: currentDist
             };
         }
 
@@ -689,20 +534,30 @@
             upcoming.sort((a, b) => a.dateObj - b.dateObj);
             const nextFive = upcoming.slice(0, 5);
 
-            // Replaces JS click overlays with standard Anchor tags encoded with Google App Bypass parameters
             nextFive.forEach(item => {
                 const dateString = item.dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                
-                // Constructed exact bypass URL to force iOS/Android into PWA web viewer rather than opening native apps
-                const searchQuery = encodeURIComponent(item.name + ' timing in India');
-                const safeGoogleUrl = `https://www.google.com/search?q=${searchQuery}&client=safari&hl=en-in&udm=50&aep=1&ntc=1&csuir=1`;
-
-                const row = document.createElement('a');
-                row.href = safeGoogleUrl;
+                const row = document.createElement('div');
                 row.className = 'event-item';
                 row.innerHTML = `<span class="event-date">${dateString}</span><span class="event-name">${item.name} ↗</span>`;
+                row.onclick = () => openInAppBrowser(item.name);
                 container.appendChild(row);
             });
+        }
+
+        function openInAppBrowser(query) {
+            const overlay = document.getElementById('inAppBrowserOverlay');
+            const iframe = document.getElementById('inAppIframe');
+            const title = document.getElementById('inAppBrowserTitle');
+            const searchUrl = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query + ' astronomy')}`;
+
+            title.textContent = query;
+            iframe.src = searchUrl;
+            overlay.style.display = 'flex';
+        }
+
+        function closeInAppBrowser() {
+            document.getElementById('inAppBrowserOverlay').style.display = 'none';
+            document.getElementById('inAppIframe').src = '';
         }
 
         if ("geolocation" in navigator) {
@@ -732,6 +587,19 @@
             refreshSkyData(); 
             requestCompassPermission();
         });
+
+        // SERVICE WORKER REGISTRATION (CRITICAL FOR OFFLINE PWA)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.error('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
     </script>
 </body>
 </html>
