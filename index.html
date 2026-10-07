@@ -12,7 +12,6 @@
     <style>
         :root {
             --bg-base: #0a0d12;
-            /* Brighter, more metallic silvery gradient for the tabs */
             --silver-surface: linear-gradient(145deg, #64748b 0%, #334155 100%);
             --silver-border: rgba(241, 245, 249, 0.45);
             --silver-border-specular: rgba(255, 255, 255, 0.15);
@@ -20,7 +19,6 @@
             --text-silver-dim: #e2e8f0;
             --text-silver-label: #f8fafc;
             --accent-cyan: #38bdf8;
-            /* High visibility neon green for compass */
             --bright-green: #39ff14; 
         }
 
@@ -40,7 +38,6 @@
             overflow: hidden; 
         }
 
-        /* Container anchors flush to top safe area */
         .app-container {
             width: 100%;
             max-width: 650px; 
@@ -48,7 +45,6 @@
             margin: 0 auto;
             overflow-y: auto;
             overscroll-behavior-y: contain; 
-            /* Removed extra empty spacing at the top */
             padding: env(safe-area-inset-top) 8px calc(env(safe-area-inset-bottom) + 16px) 8px;
         }
 
@@ -120,7 +116,6 @@
             cursor: pointer;
         }
 
-        /* Compass styled entirely in bright neon green */
         .compass-arrow {
             position: absolute;
             right: 12px;
@@ -131,10 +126,10 @@
             filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.8));
         }
 
-        /* Fixed Aspect Ratio accommodating the timeanddate header */
+        /* Responsive Map Box - Allows internal script to calculate its own size */
         .map-wrapper {
             width: 100%;
-            aspect-ratio: 730 / 395; /* Exact ratio of the iframe to stop bottom clipping */
+            aspect-ratio: 2 / 1; 
             border-radius: 14px;
             overflow: hidden;
             background: #0f131a;
@@ -147,9 +142,8 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 730px; 
-            height: 395px; 
-            transform-origin: 0 0; 
+            width: 100%; 
+            height: 100%; 
             border: none;
             pointer-events: none; 
         }
@@ -161,10 +155,7 @@
             padding-right: 4px;
         }
 
-        .scrollable-events::-webkit-scrollbar {
-            width: 4px;
-        }
-        
+        .scrollable-events::-webkit-scrollbar { width: 4px; }
         .scrollable-events::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.3);
             border-radius: 4px;
@@ -204,17 +195,74 @@
             flex-grow: 1;
             text-align: right;
         }
+
+        /* IN-APP BROWSER OVERLAY */
+        #browserOverlay {
+            display: none; 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 100vw; height: 100vh; 
+            background: var(--bg-base); 
+            z-index: 9999; 
+            flex-direction: column;
+        }
+
+        .browser-header {
+            height: calc(env(safe-area-inset-top) + 60px); 
+            padding: env(safe-area-inset-top) 15px 0 15px; 
+            background: #1e293b; 
+            display: flex; 
+            align-items: center; 
+            border-bottom: 1px solid #334155;
+        }
+
+        .browser-back-btn {
+            background: var(--accent-cyan); 
+            color: #fff; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .browser-title {
+            margin-left: 15px; 
+            font-weight: bold; 
+            color: #fff; 
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #browserFrame {
+            flex-grow: 1; 
+            width: 100%; 
+            border: none;
+            background: #ffffff;
+        }
     </style>
 </head>
 <body>
 
+    <!-- IN-APP BROWSER MODAL -->
+    <div id="browserOverlay">
+        <div class="browser-header">
+            <button class="browser-back-btn" onclick="closeBrowser()">← Back</button>
+            <span class="browser-title" id="browserTitle">Loading...</span>
+        </div>
+        <iframe id="browserFrame" src=""></iframe>
+    </div>
+
+    <!-- MAIN APP DASHBOARD -->
     <div class="app-container">
         <div class="header-banner">Your Place Data</div>
 
         <div class="card full-width">
             <div class="label">Digipin</div>
-            <!-- Digipin formatted as spaced 10-digits with no hyphens or Live text -->
-            <div class="val" id="digipinVal" style="letter-spacing: 1px;">M C 2 5 M 5 5 4 8 M</div>
+            <div class="val" id="digipinVal" style="letter-spacing: 1.5px;">M C 2 5 M 5 5 4 8 M</div>
         </div>
 
         <div class="grid-2">
@@ -265,6 +313,7 @@
             </div>
         </div>
 
+        <!-- Auto-Scaling Live Map -->
         <div class="map-wrapper" id="mapContainer">
             <iframe class="map-iframe" 
                     id="mapFrame"
@@ -314,6 +363,7 @@
     </div>
 
     <script>
+        // 1. Compass Engine
         let currentLat = 10.545894;
         let currentLon = 76.224575;
         let smoothedHeading = 0;
@@ -342,6 +392,7 @@
             }
         }
 
+        // 2. Solar/Lunar Mathematical Engine
         function calculateSkyMetrics(lat, lon, date = new Date()) {
             const rad = Math.PI / 180;
             const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
@@ -382,27 +433,75 @@
             document.getElementById('dayLengthVal').textContent = metrics.dayLength;
         }
 
-        const skyEvents = [
-            { date: "Jan 3", name: "Quadrantids Meteor Shower" },
-            { date: "Mar 20", name: "Vernal Equinox" },
-            { date: "May 6", name: "Eta Aquariids Meteor Shower" },
-            { date: "Jun 21", name: "Summer Solstice" },
-            { date: "Aug 12", name: "Perseids Meteor Shower" },
-            { date: "Oct 21", name: "Orionids Meteor Shower" },
-            { date: "Dec 14", name: "Geminids Peak Meteor Shower" }
-        ];
-
-        function renderEvents() {
+        // 3. Dynamic Auto-Updating Seasonal Events Engine
+        function renderDynamicEvents() {
             const container = document.getElementById('eventsList');
-            skyEvents.forEach(item => {
+            container.innerHTML = '';
+            
+            const today = new Date();
+            const currentYear = today.getFullYear();
+            
+            // Static month/day configurations
+            const annualEvents = [
+                { m: 0, d: 3, name: "Quadrantids Meteor Shower" },
+                { m: 2, d: 20, name: "Vernal Equinox" },
+                { m: 3, d: 22, name: "Lyrids Meteor Shower" },
+                { m: 4, d: 6, name: "Eta Aquariids Meteor Shower" },
+                { m: 5, d: 21, name: "Summer Solstice" },
+                { m: 7, d: 12, name: "Perseids Meteor Shower" },
+                { m: 8, d: 22, name: "Autumnal Equinox" },
+                { m: 9, d: 21, name: "Orionids Meteor Shower" },
+                { m: 10, d: 17, name: "Leonids Meteor Shower" },
+                { m: 11, d: 14, name: "Geminids Peak Meteor Shower" },
+                { m: 11, d: 21, name: "Winter Solstice" }
+            ];
+
+            let upcoming = [];
+            annualEvents.forEach(evt => {
+                let eventDate = new Date(currentYear, evt.m, evt.d);
+                // If event has already passed this year, schedule for next year
+                if (eventDate < today) {
+                    eventDate = new Date(currentYear + 1, evt.m, evt.d);
+                }
+                upcoming.push({ dateObj: eventDate, name: evt.name });
+            });
+
+            // Sort chronologically and take the next 5 events
+            upcoming.sort((a, b) => a.dateObj - b.dateObj);
+            const nextFive = upcoming.slice(0, 5);
+
+            nextFive.forEach(item => {
+                const dateString = item.dateObj.toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' });
                 const row = document.createElement('div');
                 row.className = 'event-item';
-                row.innerHTML = `<span class="event-date">${item.date}</span><span class="event-name">${item.name} ↗</span>`;
-                row.onclick = () => window.open(`https://www.google.com/search?q=${encodeURIComponent(item.name + ' timing india')}&udm=50`, '_blank', 'noopener,noreferrer');
+                row.innerHTML = `<span class="event-date">${dateString}</span><span class="event-name">${item.name} ↗</span>`;
+                
+                // Triggers In-App Browser Modal
+                row.onclick = () => openBrowser(item.name);
                 container.appendChild(row);
             });
         }
 
+        // 4. In-App Browser Overlay Controller
+        function openBrowser(searchQuery) {
+            const overlay = document.getElementById('browserOverlay');
+            const frame = document.getElementById('browserFrame');
+            const title = document.getElementById('browserTitle');
+            
+            // Using DuckDuckGo Lite: Fast, Zero-Telemetry, and allows iframe embedding.
+            const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(searchQuery + ' astronomy')}`;
+            
+            title.textContent = searchQuery;
+            frame.src = url;
+            overlay.style.display = 'flex';
+        }
+
+        function closeBrowser() {
+            document.getElementById('browserOverlay').style.display = 'none';
+            document.getElementById('browserFrame').src = '';
+        }
+
+        // 5. Geolocation & Timers
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition((pos) => {
                 currentLat = pos.coords.latitude; currentLon = pos.coords.longitude;
@@ -421,25 +520,11 @@
             document.getElementById('dateVal').textContent = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }, 1000);
 
-        // Map Scaling Engine - Adjusts to specific 730x395 aspect ratio
+        // Initialization
         window.addEventListener('load', () => {
-            renderEvents(); 
+            renderDynamicEvents(); 
             updateSkyMetrics(); 
             requestCompassPermission();
-
-            const container = document.getElementById("mapContainer");
-            const iframe = document.getElementById("mapFrame");
-            const NATIVE_WIDTH = 730; 
-
-            if (container && window.ResizeObserver) {
-                const resizeObserver = new ResizeObserver(entries => {
-                    for (let entry of entries) {
-                        const scaleFactor = entry.contentRect.width / NATIVE_WIDTH;
-                        iframe.style.transform = `scale(${scaleFactor})`;
-                    }
-                });
-                resizeObserver.observe(container);
-            }
         });
     </script>
 </body>
