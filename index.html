@@ -139,37 +139,9 @@
         }
         .event-date { color: var(--accent-cyan); font-size: 13px; font-weight: 700; white-space: nowrap; margin-right: 8px; }
         .event-name { color: var(--text-silver-bright); font-size: 13px; font-weight: 500; flex-grow: 1; text-align: right; }
-
-        /* IN-APP BROWSER */
-        #inAppBrowserOverlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            background: var(--bg-base); z-index: 99999; flex-direction: column;
-        }
-        .browser-header {
-            height: calc(env(safe-area-inset-top) + 60px); padding: env(safe-area-inset-top) 15px 0 15px; 
-            background: #1e293b; display: flex; align-items: center; justify-content: space-between;
-            border-bottom: 1px solid #334155; flex-shrink: 0;
-        }
-        .browser-back-btn {
-            background: var(--accent-cyan); color: #fff; border: none; padding: 8px 16px; 
-            border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer;
-        }
-        .browser-title {
-            font-weight: bold; color: #fff; font-size: 15px; white-space: nowrap;
-            overflow: hidden; text-overflow: ellipsis; max-width: 65%; text-align: right;
-        }
-        #inAppIframe { flex-grow: 1; width: 100%; border: none; background: #ffffff; }
     </style>
 </head>
 <body>
-
-    <div id="inAppBrowserOverlay">
-        <div class="browser-header">
-            <button class="browser-back-btn" onclick="closeInAppBrowser()">← Back</button>
-            <span class="browser-title" id="inAppBrowserTitle">Loading...</span>
-        </div>
-        <iframe id="inAppIframe" sandbox="allow-same-origin allow-scripts allow-forms" src=""></iframe>
-    </div>
 
     <div class="app-container">
         <div class="header-banner">
@@ -536,28 +508,17 @@
 
             nextFive.forEach(item => {
                 const dateString = item.dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                const row = document.createElement('div');
+                const searchQuery = encodeURIComponent(item.name + ' timing in India');
+                const safeGoogleUrl = `https://www.google.com/search?q=${searchQuery}&client=safari&hl=en-in&udm=50&aep=1&ntc=1&csuir=1`;
+
+                const row = document.createElement('a');
+                row.href = safeGoogleUrl;
+                row.target = '_blank';
+                row.rel = 'noopener noreferrer';
                 row.className = 'event-item';
                 row.innerHTML = `<span class="event-date">${dateString}</span><span class="event-name">${item.name} ↗</span>`;
-                row.onclick = () => openInAppBrowser(item.name);
                 container.appendChild(row);
             });
-        }
-
-        function openInAppBrowser(query) {
-            const overlay = document.getElementById('inAppBrowserOverlay');
-            const iframe = document.getElementById('inAppIframe');
-            const title = document.getElementById('inAppBrowserTitle');
-            const searchUrl = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query + ' astronomy')}`;
-
-            title.textContent = query;
-            iframe.src = searchUrl;
-            overlay.style.display = 'flex';
-        }
-
-        function closeInAppBrowser() {
-            document.getElementById('inAppBrowserOverlay').style.display = 'none';
-            document.getElementById('inAppIframe').src = '';
         }
 
         if ("geolocation" in navigator) {
@@ -588,16 +549,12 @@
             requestCompassPermission();
         });
 
-        // SERVICE WORKER REGISTRATION (CRITICAL FOR OFFLINE PWA)
+        // SERVICE WORKER REGISTRATION
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    })
-                    .catch(err => {
-                        console.error('ServiceWorker registration failed: ', err);
-                    });
+                    .then(reg => console.log('SW Registered:', reg.scope))
+                    .catch(err => console.error('SW Registration Failed:', err));
             });
         }
     </script>

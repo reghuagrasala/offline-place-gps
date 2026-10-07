@@ -1,17 +1,20 @@
-const CACHE_NAME = 'telemetry-cache-v8';
-const STATIC_ASSETS = [
+const CACHE_NAME = 'telemetry-offline-v9';
+
+// Only core files required for startup are explicitly pre-cached. 
+// Missing PNG icon files will NOT crash the installation anymore.
+const CORE_ASSETS = [
     './',
     './index.html',
-    './manifest.json',
-    './icon-192.png',
-    './icon-512.png',
-    './apple-touch-icon.png'
+    './manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(STATIC_ASSETS);
+            // Safe caching: ignores missing optional icon files
+            return Promise.allSettled(
+                CORE_ASSETS.map(asset => cache.add(asset).catch(err => console.warn('Skipped missing asset:', asset)))
+            );
         })
     );
     self.skipWaiting();
@@ -32,7 +35,7 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Advanced Fetch Interceptor: Caches Cross-Origin CDNs (Globe.gl, Three.js, Textures)
+// Cache-First with Dynamic Network Fallback & Storage
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
 
@@ -43,8 +46,7 @@ self.addEventListener('fetch', (event) => {
             }
             
             return fetch(event.request).then((networkResponse) => {
-                // If it's a valid successful GET response, cache it dynamically for offline use
-                if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
+                if (networkResponse && networkResponse.status === 200) {
                     const responseToCache = networkResponse.clone();
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(event.request, responseToCache);
@@ -52,7 +54,7 @@ self.addEventListener('fetch', (event) => {
                 }
                 return networkResponse;
             }).catch(() => {
-                // Offline Fallback for main page
+                // Offline fallback for navigation requests
                 if (event.request.mode === 'navigate') {
                     return caches.match('./index.html');
                 }
