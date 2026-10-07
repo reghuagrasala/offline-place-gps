@@ -116,7 +116,6 @@
             margin-bottom: 8px;
         }
 
-        /* NEW 3x3 GRID SYSTEM */
         .grid-3 {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -136,6 +135,9 @@
             font-size: 9px;
             line-height: 1.2;
             margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
         }
 
         .grid-3 .val {
@@ -174,7 +176,6 @@
             text-overflow: ellipsis;
         }
 
-        /* SVG Icon styling inside grid */
         .card-icon {
             width: 16px;
             height: 16px;
@@ -230,7 +231,6 @@
             z-index: 10;
         }
 
-        /* HERO MOON BOX */
         .hero-moon-box {
             display: flex;
             align-items: center;
@@ -268,7 +268,6 @@
             font-weight: 500;
         }
 
-        /* EVENTS */
         .scrollable-events {
             max-height: 160px;
             overflow-y: auto;
@@ -317,7 +316,6 @@
             text-align: right;
         }
 
-        /* MODAL */
         #readerOverlay {
             display: none; 
             position: fixed; 
@@ -485,7 +483,7 @@
                 <div class="val" id="gridDayLength">--</div>
             </div>
             <div class="card">
-                <div class="label">Moon Phase <svg class="card-icon" viewBox="0 0 24 24" fill="var(--gold)"><circle cx="12" cy="12" r="8"/></svg></div>
+                <div class="label">Moon Phase <div class="card-icon" id="gridPhaseSvg"></div></div>
                 <div class="val" id="gridPhaseText" style="color: var(--gold); font-size: 12.5px;">--</div>
             </div>
 
@@ -516,7 +514,6 @@
         </div>
     </div>
 
-    <!-- Live Day/Night Globe.gl Initialization Script -->
     <script type="module">
         import Globe from 'globe.gl';
         import * as THREE from 'three';
@@ -578,29 +575,31 @@
     </script>
 
     <script>
-        // Global variables
         window.currentLat = 10.545894;
         window.currentLon = 76.224575;
         let smoothedHeading = 0;
         const EMA_ALPHA = 0.18; 
 
-        // Precision Moon SVG Renderer (Matches the exact Crescent/Gibbous curves)
-        function renderHeroMoonSVG(phaseName) {
+        // Mathematically dynamic SVG Generator - Matches illumination perfectly
+        function getDynamicMoonSVG(phaseDays) {
+            const p = phaseDays / 29.53058867; // Normalized 0 to 1
             const baseCircle = `<circle cx="50" cy="50" r="48" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>`;
-            let shadowPath = '';
-            
-            switch(phaseName) {
-                case 'New Moon': shadowPath = ''; break;
-                case 'Waxing Crescent': shadowPath = `<path d="M 50 2 A 48 48 0 0 1 50 98 A 35 48 0 0 0 50 2" fill="#f8fafc"/>`; break;
-                case 'First Quarter': shadowPath = `<path d="M 50 2 A 48 48 0 0 1 50 98 L 50 2" fill="#f8fafc"/>`; break;
-                case 'Waxing Gibbous': shadowPath = `<path d="M 50 2 A 48 48 0 0 1 50 98 A 35 48 0 0 1 50 2" fill="#f8fafc"/>`; break;
-                case 'Full Moon': shadowPath = `<circle cx="50" cy="50" r="48" fill="#f8fafc"/>`; break;
-                case 'Waning Gibbous': shadowPath = `<path d="M 50 2 A 48 48 0 0 0 50 98 A 35 48 0 0 0 50 2" fill="#f8fafc"/>`; break;
-                case 'Last Quarter': shadowPath = `<path d="M 50 2 A 48 48 0 0 0 50 98 L 50 2" fill="#f8fafc"/>`; break;
-                case 'Waning Crescent': shadowPath = `<path d="M 50 2 A 48 48 0 0 0 50 98 A 35 48 0 0 1 50 2" fill="#f8fafc"/>`; break;
-                default: shadowPath = ''; 
+            let path = '';
+
+            if (p > 0 && p < 1) {
+                if (p <= 0.5) {
+                    // Waxing: Right side illuminated
+                    const rx = 48 * Math.abs(1 - 4 * p);
+                    const sweep = p <= 0.25 ? 0 : 1; 
+                    path = `<path d="M 50 2 A 48 48 0 0 1 50 98 A ${rx} 48 0 0 ${sweep} 50 2" fill="#f8fafc"/>`;
+                } else {
+                    // Waning: Left side illuminated
+                    const rx = 48 * Math.abs(3 - 4 * p);
+                    const sweep = p >= 0.75 ? 1 : 0; 
+                    path = `<path d="M 50 2 A 48 48 0 0 0 50 98 A ${rx} 48 0 0 ${sweep} 50 2" fill="#f8fafc"/>`;
+                }
             }
-            document.getElementById('mainMoonSvg').innerHTML = `<svg viewBox="0 0 100 100" width="100%" height="100%">${baseCircle}${shadowPath}</svg>`;
+            return `<svg viewBox="0 0 100 100" width="100%" height="100%">${baseCircle}${path}</svg>`;
         }
 
         function handleOrientation(e) {
@@ -626,12 +625,10 @@
             }
         }
 
-        // Core Astronomical Math Engine
         function calculateSkyMetrics(lat, lon, date = new Date()) {
             const rad = Math.PI / 180;
             const deg = 180 / Math.PI;
             
-            // Solar Data
             const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
             const declination = -23.44 * Math.cos((360 / 365 * (dayOfYear + 10)) * rad);
             const latRad = lat * rad, decRad = declination * rad;
@@ -643,7 +640,6 @@
             const sunriseH = solarNoon - (dayHours / 2);
             const sunsetH = solarNoon + (dayHours / 2);
 
-            // Live Altitude & Azimuth
             const currentHourDecimal = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
             const hourAngle = (currentHourDecimal - solarNoon) * 15;
             const haRad = hourAngle * rad;
@@ -653,7 +649,7 @@
 
             const cosAz = (Math.sin(decRad) - Math.sin(latRad)*sinAlt) / (Math.cos(latRad)*Math.cos(Math.asin(sinAlt)));
             let azimuth = Math.acos(Math.max(-1, Math.min(1, cosAz))) * deg;
-            if (hourAngle > 0) azimuth = 360 - azimuth; // Afternoon correction
+            if (hourAngle > 0) azimuth = 360 - azimuth; 
 
             const formatAMPM = (h) => {
                 const normalized = (h + 24) % 24;
@@ -666,22 +662,26 @@
                 return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')} ${ampm}`;
             };
 
-            // Lunar Data
             const knownNewMoon = new Date('2024-01-11T11:57:00Z');
             const lunarCycle = 29.53058867;
             const phaseDays = (((date.getTime() - knownNewMoon.getTime()) / 86400000) % lunarCycle + lunarCycle) % lunarCycle;
             
-            const phaseName = phaseDays < 3.69 ? "Waxing Crescent" : phaseDays < 11.07 ? "First Quarter" : phaseDays < 14.76 ? "Waxing Gibbous" : phaseDays < 18.45 ? "Full Moon" : phaseDays < 22.14 ? "Waning Gibbous" : phaseDays < 25.83 ? "Last Quarter" : "Waning Crescent";
+            // CORRECTED boundaries for Moon Phases
+            let phaseName = "";
+            if (phaseDays < 1.84) phaseName = "New Moon";
+            else if (phaseDays < 5.54) phaseName = "Waxing Crescent";
+            else if (phaseDays < 9.23) phaseName = "First Quarter";
+            else if (phaseDays < 12.92) phaseName = "Waxing Gibbous";
+            else if (phaseDays < 16.61) phaseName = "Full Moon";
+            else if (phaseDays < 20.30) phaseName = "Waning Gibbous";
+            else if (phaseDays < 24.00) phaseName = "Last Quarter";
+            else if (phaseDays < 27.68) phaseName = "Waning Crescent";
+            else phaseName = "New Moon";
             
-            // Illumination percentage math
             const illumination = (0.5 * (1 - Math.cos((phaseDays / lunarCycle) * Math.PI * 2)) * 100).toFixed(0);
-            
-            // Distance approximation (Anomalistic cycle ~27.55 days)
-            const distAvg = 384400; 
-            const distVar = 25000;
+            const distAvg = 384400, distVar = 25000;
             const anomalisticDays = (((date.getTime() - knownNewMoon.getTime()) / 86400000) % 27.55 + 27.55) % 27.55;
             const currentDist = Math.round(distAvg - distVar * Math.cos((anomalisticDays / 27.55) * Math.PI * 2));
-
             const moonLag = (phaseDays / lunarCycle) * 24;
             
             return {
@@ -691,7 +691,8 @@
                 altitude: altitude.toFixed(1),
                 azimuth: azimuth.toFixed(0),
                 dayLength: `${Math.floor(dayHours)}.${Math.round((dayHours - Math.floor(dayHours)) * 10)}h`,
-                moonPhase: phaseName,
+                phaseName: phaseName,
+                phaseDays: phaseDays,
                 moonrise: formatAMPM((sunriseH + moonLag) % 24), 
                 moonset: formatAMPM((sunsetH + moonLag) % 24),
                 illumination: illumination,
@@ -700,23 +701,23 @@
             };
         }
 
-        // Live Grid Updater
         function refreshSkyData() {
             const metrics = calculateSkyMetrics(window.currentLat, window.currentLon, new Date());
             
-            // Hero Box
-            document.getElementById('heroPhaseName').textContent = metrics.moonPhase;
+            document.getElementById('heroPhaseName').textContent = metrics.phaseName;
             document.getElementById('heroIllumination').textContent = `${metrics.illumination}% illuminated`;
             document.getElementById('heroMoonSub').textContent = `Age ${metrics.age}d • ${metrics.distance} km`;
-            renderHeroMoonSVG(metrics.moonPhase);
             
-            // 3x3 Grid
+            const dynamicSvgHtml = getDynamicMoonSVG(metrics.phaseDays);
+            document.getElementById('mainMoonSvg').innerHTML = dynamicSvgHtml;
+            document.getElementById('gridPhaseSvg').innerHTML = dynamicSvgHtml;
+            
             document.getElementById('gridSunrise').textContent = metrics.sunrise;
             document.getElementById('gridSunset').textContent = metrics.sunset;
             document.getElementById('gridMoonrise').textContent = metrics.moonrise;
             document.getElementById('gridMoonset').textContent = metrics.moonset;
             document.getElementById('gridDayLength').textContent = metrics.dayLength;
-            document.getElementById('gridPhaseText').textContent = metrics.moonPhase;
+            document.getElementById('gridPhaseText').textContent = metrics.phaseName;
             
             document.getElementById('gridSolarNoon').textContent = metrics.solarNoon;
             document.getElementById('gridAltitude').textContent = `${metrics.altitude}°`;
@@ -795,7 +796,6 @@
 
         function closeReader() { document.getElementById('readerOverlay').style.display = 'none'; }
 
-        // Live Polling & Metric Engine
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition((pos) => {
                 window.currentLat = pos.coords.latitude; 
@@ -811,7 +811,6 @@
             }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
         }
 
-        // Run Sky Engine every 1 second for live sun altitude ticking
         setInterval(() => {
             const now = new Date();
             document.getElementById('timeVal').textContent = now.toLocaleTimeString('en-US', { hour12: true });
