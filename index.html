@@ -10,7 +10,6 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     
-    <!-- Globe.gl & Three.js ES Module Imports -->
     <script type="importmap">
       {
         "imports": {
@@ -70,6 +69,26 @@
             color: #ffffff;
             box-shadow: 0 4px 18px rgba(56, 189, 248, 0.28);
             margin-bottom: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Active GPS Indicator */
+        .gps-pulse {
+            width: 10px;
+            height: 10px;
+            background-color: var(--bright-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--bright-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(57, 255, 20, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(57, 255, 20, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(57, 255, 20, 0); }
         }
 
         .section-label {
@@ -137,7 +156,6 @@
             filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.8));
         }
 
-        /* 3D LIVE DAY/NIGHT GLOBE CONTAINER */
         .map-wrapper {
             width: 100%;
             aspect-ratio: 2 / 1; 
@@ -155,7 +173,6 @@
             display: block;
         }
 
-        /* GPS RESET BUTTON OVERLAY */
         .globe-reset-btn {
             position: absolute;
             bottom: 10px;
@@ -176,6 +193,18 @@
         .globe-reset-btn:active {
             background: var(--accent-cyan);
             color: #fff;
+        }
+
+        .moon-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .moon-svg-container {
+            width: 48px;
+            height: 48px;
+            filter: drop-shadow(0 0 6px rgba(226, 232, 240, 0.4));
         }
 
         .scrollable-events {
@@ -288,7 +317,6 @@
 </head>
 <body>
 
-    <!-- NATIVE IN-APP ARTICLE READER -->
     <div id="readerOverlay">
         <div class="reader-header">
             <button class="reader-back-btn" onclick="closeReader()">← Back</button>
@@ -297,9 +325,11 @@
         <div class="reader-body" id="readerContent"></div>
     </div>
 
-    <!-- MAIN APP DASHBOARD -->
     <div class="app-container">
-        <div class="header-banner">Your Place Data</div>
+        <div class="header-banner">
+            <div class="gps-pulse"></div>
+            Your Place Data
+        </div>
 
         <div class="card full-width">
             <div class="label">Digipin</div>
@@ -354,13 +384,23 @@
             </div>
         </div>
 
-        <!-- 3D Live Day/Night Globe Container with Reset Button -->
         <div class="map-wrapper" id="mapContainer">
             <div id="globeViz"></div>
             <button class="globe-reset-btn" id="resetGlobeBtn">📍 Reset to GPS</button>
         </div>
 
         <div class="section-label">Sky Data</div>
+
+        <!-- NEW FULL-WIDTH DYNAMIC MOON PHASE BOX -->
+        <div class="card full-width moon-box">
+            <div>
+                <div class="label">Current Phase</div>
+                <div class="val" id="moonPhaseValText">--</div>
+            </div>
+            <div class="moon-svg-container" id="moonSvgRender">
+                <!-- SVG dynamically injected here -->
+            </div>
+        </div>
 
         <div class="grid-2">
             <div class="card">
@@ -385,11 +425,7 @@
         </div>
 
         <div class="grid-2">
-            <div class="card">
-                <div class="label">Moon Phase</div>
-                <div class="val" id="moonPhaseVal">--</div>
-            </div>
-            <div class="card">
+            <div class="card" style="grid-column: span 2;">
                 <div class="label">Day Length</div>
                 <div class="val" id="dayLengthVal">--</div>
             </div>
@@ -415,11 +451,10 @@
             .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
             .showAtmosphere(true)
             .atmosphereColor('#3a86ff')
-            .atmosphereAltitude(0.15)
+            .atmosphereAltitude(0.12)
             .width(container.clientWidth)
             .height(container.clientHeight);
 
-        // Zoomed in closer (altitude 1.3) to fill the box space better
         window.resetGlobeView = () => {
             world.pointOfView({ lat: window.currentLat || 10.545894, lng: window.currentLon || 76.224575, altitude: 1.3 }, 1000);
         };
@@ -430,22 +465,19 @@
             resetGlobeView();
         });
 
-        // Delay slightly to let Globe.gl inject its defaults, then strip and replace them for stark day/night contrast
         setTimeout(() => {
             const scene = world.scene();
-            
-            // Remove the default lights that wash out the day/night shadows
             scene.children = scene.children.filter(c => !(c instanceof THREE.Light));
 
-            // Extremely dim blue ambient light for the night side
-            const ambientLight = new THREE.AmbientLight(0x0a1128, 0.25); 
+            // BRIGHTENED AMBIENT LIGHT: Makes the night-side visible and bluish
+            const ambientLight = new THREE.AmbientLight(0x4a5a7a, 0.65); 
             scene.add(ambientLight);
 
-            // Intense white directional light acting as the Sun
-            const sunLight = new THREE.DirectionalLight(0xffffff, 3.5);
+            // Strong Directional Sunlight for stark contrast
+            const sunLight = new THREE.DirectionalLight(0xfff5e6, 3.0);
             scene.add(sunLight);
 
-            function updateSunPosition() {
+            window.updateSunPosition = function() {
                 const now = new Date();
                 const hours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
                 
@@ -456,16 +488,13 @@
                 const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
                 const sunLat = -23.44 * Math.cos((360 / 365 * (dayOfYear + 10)) * (Math.PI / 180));
 
-                // Native spherical coordinate translation guarantees precise shadow casting
                 const sunCoords = world.getCoords(sunLat, sunLng, 100);
                 sunLight.position.set(sunCoords.x, sunCoords.y, sunCoords.z);
-            }
+            };
 
-            updateSunPosition();
-            setInterval(updateSunPosition, 60000); // Shift sun every minute
+            window.updateSunPosition();
         }, 300);
 
-        // Robust Auto-Fit Observer
         const resizeObserver = new ResizeObserver(entries => {
             for (let entry of entries) {
                 world.width(entry.contentRect.width);
@@ -476,11 +505,32 @@
     </script>
 
     <script>
-        // Global coordinates for GPS reset access
+        // Global variables
         window.currentLat = 10.545894;
         window.currentLon = 76.224575;
         let smoothedHeading = 0;
         const EMA_ALPHA = 0.18; 
+
+        // Dynamic SVG Moon Generator
+        function renderMoonSVG(phaseName) {
+            const baseCircle = `<circle cx="50" cy="50" r="48" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>`;
+            let shadowPath = '';
+            
+            // Mathematically correct SVG paths for the 8 phases
+            switch(phaseName) {
+                case 'New Moon': shadowPath = ''; break;
+                case 'Waxing Crescent': shadowPath = `<path d="M 50 2 A 48 48 0 0 1 50 98 A 35 48 0 0 0 50 2" fill="#e2e8f0"/>`; break;
+                case 'First Quarter': shadowPath = `<path d="M 50 2 A 48 48 0 0 1 50 98 L 50 2" fill="#e2e8f0"/>`; break;
+                case 'Waxing Gibbous': shadowPath = `<path d="M 50 2 A 48 48 0 0 1 50 98 A 35 48 0 0 1 50 2" fill="#e2e8f0"/>`; break;
+                case 'Full Moon': shadowPath = `<circle cx="50" cy="50" r="48" fill="#e2e8f0"/>`; break;
+                case 'Waning Gibbous': shadowPath = `<path d="M 50 2 A 48 48 0 0 0 50 98 A 35 48 0 0 0 50 2" fill="#e2e8f0"/>`; break;
+                case 'Last Quarter': shadowPath = `<path d="M 50 2 A 48 48 0 0 0 50 98 L 50 2" fill="#e2e8f0"/>`; break;
+                case 'Waning Crescent': shadowPath = `<path d="M 50 2 A 48 48 0 0 0 50 98 A 35 48 0 0 1 50 2" fill="#e2e8f0"/>`; break;
+                default: shadowPath = ''; 
+            }
+            
+            document.getElementById('moonSvgRender').innerHTML = `<svg viewBox="0 0 100 100" width="100%" height="100%">${baseCircle}${shadowPath}</svg>`;
+        }
 
         function handleOrientation(e) {
             let heading = e.webkitCompassHeading !== undefined ? e.webkitCompassHeading : (e.alpha !== null ? 360 - e.alpha : null);
@@ -505,7 +555,6 @@
             }
         }
 
-        // Solar/Lunar Engine with 12-Hour AM/PM Formatting
         function calculateSkyMetrics(lat, lon, date = new Date()) {
             const rad = Math.PI / 180;
             const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
@@ -535,26 +584,30 @@
             
             const moonLag = (phaseDays / 29.53) * 24;
             return {
-                sunrise: formatAMPM(sunriseH), 
-                sunset: formatAMPM(sunsetH),
+                sunrise: formatAMPM(sunriseH), sunset: formatAMPM(sunsetH),
                 dayLength: `${Math.floor(dayHours)}h ${Math.round((dayHours - Math.floor(dayHours)) * 60)}m`,
                 moonPhase: phaseName,
-                moonrise: formatAMPM((sunriseH + moonLag) % 24), 
-                moonset: formatAMPM((sunsetH + moonLag) % 24)
+                moonrise: formatAMPM((sunriseH + moonLag) % 24), moonset: formatAMPM((sunsetH + moonLag) % 24)
             };
         }
 
-        function updateSkyMetrics() {
-            const metrics = calculateSkyMetrics(window.currentLat, window.currentLon);
+        // Dedicated sync function to guarantee accuracy and refresh
+        function refreshSkyData() {
+            const metrics = calculateSkyMetrics(window.currentLat, window.currentLon, new Date());
             document.getElementById('sunriseVal').textContent = metrics.sunrise;
             document.getElementById('sunsetVal').textContent = metrics.sunset;
             document.getElementById('moonriseVal').textContent = metrics.moonrise;
             document.getElementById('moonsetVal').textContent = metrics.moonset;
-            document.getElementById('moonPhaseVal').textContent = metrics.moonPhase;
+            document.getElementById('moonPhaseValText').textContent = metrics.moonPhase;
             document.getElementById('dayLengthVal').textContent = metrics.dayLength;
+            
+            renderMoonSVG(metrics.moonPhase);
+            
+            if (typeof window.updateSunPosition === 'function') {
+                window.updateSunPosition();
+            }
         }
 
-        // Seasonal Sky Events & In-App Guides
         const eventGuides = {
             "Quadrantids Meteor Shower": "The Quadrantids peak in early January, known for bright fireball meteors. Best viewed after midnight away from city lights looking towards the northeast.",
             "Vernal Equinox": "The March equinox marks the exact moment the Sun crosses the celestial equator. Day and night are approximately equal length worldwide.",
@@ -630,7 +683,7 @@
             document.getElementById('readerOverlay').style.display = 'none';
         }
 
-        // Geolocation with Corrected Elevation Fallback
+        // Force High-Accuracy, Non-Cached Geolocation
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition((pos) => {
                 window.currentLat = pos.coords.latitude; 
@@ -645,19 +698,28 @@
 
                 if (pos.coords.accuracy) document.getElementById('accVal').textContent = `± ${Math.round(pos.coords.accuracy)} m`;
                 if (pos.coords.speed) document.getElementById('speedVal').textContent = `${(pos.coords.speed * 3.6).toFixed(1)} Km/h`;
-                updateSkyMetrics();
-            }, () => {}, { enableHighAccuracy: true });
+                
+                refreshSkyData();
+            }, () => {}, { 
+                enableHighAccuracy: true,
+                maximumAge: 0, // Forces fresh data retrieval
+                timeout: 10000 
+            });
         }
 
+        // Live Clock Loop
         setInterval(() => {
             const now = new Date();
             document.getElementById('timeVal').textContent = now.toLocaleTimeString('en-US', { hour12: true });
             document.getElementById('dateVal').textContent = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }, 1000);
 
+        // Keep Sky Data continuously accurate without relying solely on GPS triggers
+        setInterval(refreshSkyData, 60000);
+
         window.addEventListener('load', () => {
             renderDynamicEvents(); 
-            updateSkyMetrics(); 
+            refreshSkyData(); 
             requestCompassPermission();
         });
     </script>
