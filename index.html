@@ -50,7 +50,7 @@
         }
 
         .header-banner {
-            background: linear-gradient(135deg, #0284c7, #38bdf8); /* Default Day */
+            background: linear-gradient(135deg, #0284c7, #38bdf8); 
             transition: background 1s ease;
             border-radius: 16px; padding: 24px 14px;
             text-align: center; font-weight: 800; font-size: 24px;
@@ -400,6 +400,41 @@
         let smoothedHeading = 0;
         const EMA_ALPHA = 0.18; 
 
+        // Official India Post DIGIPIN algorithm
+        const DIGIPIN_GRID = [
+          ["F","C","9","8"],
+          ["J","3","2","7"],
+          ["K","4","5","6"],
+          ["L","M","P","T"]
+        ];
+        const DIGIPIN_BOUNDS={minLat:2.5,maxLat:38.5,minLon:63.5,maxLon:99.5};
+
+        function getDigiPin(lat,lon){
+          if(lat<DIGIPIN_BOUNDS.minLat||lat>DIGIPIN_BOUNDS.maxLat) return "OUT OF BOUNDS";
+          if(lon<DIGIPIN_BOUNDS.minLon||lon>DIGIPIN_BOUNDS.maxLon) return "OUT OF BOUNDS";
+          let minLat=DIGIPIN_BOUNDS.minLat, maxLat=DIGIPIN_BOUNDS.maxLat, minLon=DIGIPIN_BOUNDS.minLon, maxLon=DIGIPIN_BOUNDS.maxLon, pin="";
+          for(let level=1;level<=10;level++){
+            const latDiv=(maxLat-minLat)/4, lonDiv=(maxLon-minLon)/4;
+            let row=3-Math.floor((lat-minLat)/latDiv), col=Math.floor((lon-minLon)/lonDiv);
+            row=Math.max(0,Math.min(row,3)); col=Math.max(0,Math.min(col,3));
+            pin+=DIGIPIN_GRID[row][col];
+            maxLat=minLat+latDiv*(4-row); minLat=minLat+latDiv*(3-row);
+            minLon=minLon+lonDiv*col; maxLon=minLon+lonDiv;
+          }
+          return pin;
+        }
+
+        // Live updater for UI layout
+        function updateDigipin(lat, lon) {
+            if(!lat || !lon) return;
+            const pin = getDigiPin(lat, lon);
+            if (pin === "OUT OF BOUNDS") {
+                document.getElementById('digipinVal').textContent = "OUTSIDE INDIA";
+            } else {
+                document.getElementById('digipinVal').textContent = pin.split('').join(' ');
+            }
+        }
+
         // Metric Descriptions Dictionary
         const metricDescriptions = {
             "Digipin": "DIGIPIN is a 10-character alphanumeric national addressing grid code serving as a highly accurate digital location identifier.",
@@ -430,46 +465,6 @@
 
         function closeDescModal() {
             document.getElementById('descModalOverlay').style.display = 'none';
-        }
-
-        // Highly sensitive Base16 Digipin mapped to India's Bounding Box
-        function updateDigipin(lat, lon) {
-            if(!lat || !lon) return;
-            const charset = "23456789CGJMPRWX"; // 16-char India Post style alphabet
-            
-            // Boundary constraints strictly simulating India's geographical box
-            let minLat = 6.0, maxLat = 39.0;
-            let minLon = 68.0, maxLon = 99.0;
-            
-            // Fallback for global mapping outside India
-            if(lat < minLat || lat > maxLat || lon < minLon || lon > maxLon) {
-                minLat = -90; maxLat = 90; minLon = -180; maxLon = 180;
-            }
-
-            let hash = "";
-            let isEven = true;
-            let bit = 0;
-            let ch = 0;
-
-            // Calculates 10 characters (40 bits). At India scale, resolution is ~3 meters.
-            while (hash.length < 10) {
-                if (isEven) {
-                    let mid = (minLon + maxLon) / 2;
-                    if (lon > mid) { ch |= (1 << (3 - bit)); minLon = mid; } else { maxLon = mid; }
-                } else {
-                    let mid = (minLat + maxLat) / 2;
-                    if (lat > mid) { ch |= (1 << (3 - bit)); minLat = mid; } else { maxLat = mid; }
-                }
-                isEven = !isEven;
-                if (bit < 3) {
-                    bit++;
-                } else {
-                    hash += charset[ch];
-                    bit = 0;
-                    ch = 0;
-                }
-            }
-            document.getElementById('digipinVal').textContent = hash.split('').join(' ');
         }
 
         function updateDynamicWallpaper() {
@@ -671,22 +666,6 @@
             });
         }
 
-        function openInAppBrowser(query) {
-            const overlay = document.getElementById('inAppBrowserOverlay');
-            const iframe = document.getElementById('inAppIframe');
-            const title = document.getElementById('inAppBrowserTitle');
-            const searchUrl = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(query + ' astronomy')}`;
-
-            title.textContent = query;
-            iframe.src = searchUrl;
-            overlay.style.display = 'flex';
-        }
-
-        function closeInAppBrowser() {
-            document.getElementById('inAppBrowserOverlay').style.display = 'none';
-            document.getElementById('inAppIframe').src = '';
-        }
-
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition((pos) => {
                 window.currentLat = pos.coords.latitude; 
@@ -694,6 +673,7 @@
                 document.getElementById('latVal').textContent = `${window.currentLat.toFixed(6)}° ${window.currentLat >= 0 ? 'N' : 'S'}`;
                 document.getElementById('lonVal').textContent = `${window.currentLon.toFixed(6)}° ${window.currentLon >= 0 ? 'E' : 'W'}`;
                 
+                // Triggers highly-sensitive live recalculation of the official India Post Digipin
                 updateDigipin(window.currentLat, window.currentLon);
 
                 const validAlt = (pos.coords.altitude !== null && !isNaN(pos.coords.altitude) && pos.coords.altitude !== 0) 
