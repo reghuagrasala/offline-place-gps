@@ -9,6 +9,17 @@
     <title>Place & Sky Telemetry</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    
+    <!-- Globe.gl Dependencies via ES Modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://esm.sh/three",
+          "globe.gl": "https://esm.sh/globe.gl"
+        }
+      }
+    </script>
+
     <style>
         :root {
             --bg-base: #0a0d12;
@@ -126,29 +137,21 @@
             filter: drop-shadow(0 0 6px rgba(57, 255, 20, 0.8));
         }
 
-        /* PERFECT MAP SCALING VIA CSS CONTAINER QUERIES */
+        /* 3D GLOBE.GL CONTAINER */
         .map-wrapper {
             width: 100%;
-            aspect-ratio: 730 / 395; 
+            aspect-ratio: 2 / 1; 
             border-radius: 14px;
             overflow: hidden;
-            background: #0f131a;
+            background: #020617;
             border: 1px solid var(--silver-border);
             margin-bottom: 12px;
             position: relative;
-            container-type: inline-size; /* Enables modern CSS scaling */
         }
 
-        .map-iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 730px; /* Fixed native width */
-            height: 395px; /* Fixed native height */
-            transform-origin: 0 0;
-            transform: scale(calc(100cqi / 730)); /* Forces perfectly scaled layout */
-            border: none;
-            pointer-events: none; 
+        #globeViz {
+            width: 100%;
+            height: 100%;
         }
 
         .scrollable-events {
@@ -199,8 +202,8 @@
             text-align: right;
         }
 
-        /* SECURE IN-APP OVERLAY */
-        #browserOverlay {
+        /* NATIVE IN-APP READER MODAL */
+        #readerOverlay {
             display: none; 
             position: fixed; 
             top: 0; left: 0; 
@@ -210,7 +213,7 @@
             flex-direction: column;
         }
 
-        .browser-header {
+        .reader-header {
             height: calc(env(safe-area-inset-top) + 60px); 
             padding: env(safe-area-inset-top) 15px 0 15px; 
             background: #1e293b; 
@@ -219,7 +222,7 @@
             border-bottom: 1px solid #334155;
         }
 
-        .browser-back-btn {
+        .reader-back-btn {
             background: var(--accent-cyan); 
             color: #fff; 
             border: none; 
@@ -230,39 +233,53 @@
             cursor: pointer;
         }
 
-        .browser-title {
+        .reader-title {
             margin-left: 15px; 
             font-weight: bold; 
             color: #fff; 
-            font-size: 14px;
+            font-size: 15px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        #browserFrame {
-            flex-grow: 1; 
-            width: 100%; 
-            border: none;
-            background: #ffffff;
+        .reader-body {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #e2e8f0;
+        }
+
+        .reader-body h3 {
+            color: var(--accent-cyan);
+            margin-bottom: 10px;
+        }
+
+        .reader-body p {
+            margin-bottom: 14px;
         }
     </style>
 </head>
 <body>
 
-    <div id="browserOverlay">
-        <div class="browser-header">
-            <button class="browser-back-btn" onclick="closeBrowser()">← Back</button>
-            <span class="browser-title" id="browserTitle">Loading...</span>
+    <!-- NATIVE IN-APP ARTICLE READER -->
+    <div id="readerOverlay">
+        <div class="reader-header">
+            <button class="reader-back-btn" onclick="closeReader()">← Back</button>
+            <span class="reader-title" id="readerTitle">Sky Event Guide</span>
         </div>
-        <iframe id="browserFrame" src=""></iframe>
+        <div class="reader-body" id="readerContent"></div>
     </div>
 
+    <!-- MAIN APP DASHBOARD -->
     <div class="app-container">
         <div class="header-banner">Your Place Data</div>
 
         <div class="card full-width">
             <div class="label">Digipin</div>
+            <!-- Digipin formatted as spaced 10-digits with no hyphens or Live text -->
             <div class="val" id="digipinVal" style="letter-spacing: 1.5px;">M C 2 5 M 5 5 4 8 M</div>
         </div>
 
@@ -314,12 +331,9 @@
             </div>
         </div>
 
-        <!-- CSS-Scaled Live Map -->
+        <!-- Globe.gl 3D Interactive Map Container -->
         <div class="map-wrapper" id="mapContainer">
-            <iframe class="map-iframe" 
-                    id="mapFrame"
-                    src="https://www.timeanddate.com/scripts/sunmap.php" 
-                    scrolling="no"></iframe>
+            <div id="globeViz"></div>
         </div>
 
         <div class="section-label">Sky Data</div>
@@ -363,8 +377,31 @@
         </div>
     </div>
 
+    <!-- JavaScript Logic & Globe.gl Initialization -->
+    <script type="module">
+        import Globe from 'globe.gl';
+
+        // 1. Initialize Globe.gl 3D Map
+        const container = document.getElementById('mapContainer');
+        const world = Globe()
+            (document.getElementById('globeViz'))
+            .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+            .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+            .width(container.clientWidth)
+            .height(container.clientHeight);
+
+        // Focus viewpoint on Thrissur, Kerala (Lat: 10.5, Lng: 76.2)
+        world.pointOfView({ lat: 10.5, lng: 76.2, altitude: 2.5 });
+
+        // Responsive resizing
+        window.addEventListener('resize', () => {
+            world.width(container.clientWidth);
+            world.height(container.clientHeight);
+        });
+    </script>
+
     <script>
-        // 1. Compass Engine
+        // 2. Compass Engine
         let currentLat = 10.545894;
         let currentLon = 76.224575;
         let smoothedHeading = 0;
@@ -393,7 +430,7 @@
             }
         }
 
-        // 2. Solar/Lunar Engine
+        // 3. Solar/Lunar Engine
         function calculateSkyMetrics(lat, lon, date = new Date()) {
             const rad = Math.PI / 180;
             const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
@@ -434,7 +471,21 @@
             document.getElementById('dayLengthVal').textContent = metrics.dayLength;
         }
 
-        // 3. Dynamic Auto-Updating Seasonal Events
+        // 4. Seasonal Sky Events & In-App Guides
+        const eventGuides = {
+            "Quadrantids Meteor Shower": "The Quadrantids peak in early January, known for bright fireball meteors. Best viewed after midnight away from city lights looking towards the northeast.",
+            "Vernal Equinox": "The March equinox marks the exact moment the Sun crosses the celestial equator. Day and night are approximately equal length worldwide.",
+            "Lyrids Meteor Shower": "Active in late April, originating from Comet Thatcher. Produces 10-20 meteors per hour under dark skies.",
+            "Eta Aquariids Meteor Shower": "Created by debris from Halley's Comet, peaking in early May. Highly visible in the Southern Hemisphere and tropical northern latitudes like India.",
+            "Summer Solstice": "The longest day of the year in the Northern Hemisphere, occurring when the Earth's pole tilts closest to the Sun.",
+            "Perseids Meteor Shower": "One of the brightest meteor showers of the year, peaking in August with swift, fiery meteors from Comet Swift-Tuttle.",
+            "Autumnal Equinox": "Marks the transition to autumn, featuring equal hours of day and night as the Sun crosses southward across the equator.",
+            "Orionids Meteor Shower": "Another gift from Halley's Comet, visible in late October with fast meteors streaking across Orion.",
+            "Leonids Meteor Shower": "Known for historic meteor storms, peaking in mid-November with fast, dust-trail meteors.",
+            "Geminids Peak Meteor Shower": "Considered the king of meteor showers in December, producing up to 120 multicolored meteors per hour.",
+            "Winter Solstice": "The shortest day and longest night of the year in the Northern Hemisphere."
+        };
+
         function renderDynamicEvents() {
             const container = document.getElementById('eventsList');
             container.innerHTML = '';
@@ -471,26 +522,29 @@
                 const row = document.createElement('div');
                 row.className = 'event-item';
                 row.innerHTML = `<span class="event-date">${dateString}</span><span class="event-name">${item.name} ↗</span>`;
-                row.onclick = () => openBrowser(item.name);
+                row.onclick = () => openReader(item.name, dateString);
                 container.appendChild(row);
             });
         }
 
-        // 4. In-App Browser Overlay (DuckDuckGo Lite)
-        function openBrowser(searchQuery) {
-            const overlay = document.getElementById('browserOverlay');
-            const title = document.getElementById('browserTitle');
-            const frame = document.getElementById('browserFrame');
-            const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(searchQuery + ' astronomy')}`;
+        function openReader(eventName, dateStr) {
+            const overlay = document.getElementById('readerOverlay');
+            const title = document.getElementById('readerTitle');
+            const content = document.getElementById('readerContent');
+            const description = eventGuides[eventName] || "Detailed astronomical observation guide and peak timing details for this seasonal celestial event.";
             
-            title.textContent = searchQuery;
-            frame.src = url;
+            title.textContent = eventName;
+            content.innerHTML = `
+                <h3>${eventName}</h3>
+                <p><strong>Scheduled Date:</strong> ${dateStr}</p>
+                <p>${description}</p>
+                <p><em>Tip: For optimal viewing in Thrissur, find an open area with minimal light pollution and allow your eyes 20 minutes to adapt to the dark.</em></p>
+            `;
             overlay.style.display = 'flex';
         }
 
-        function closeBrowser() {
-            document.getElementById('browserOverlay').style.display = 'none';
-            document.getElementById('browserFrame').src = '';
+        function closeReader() {
+            document.getElementById('readerOverlay').style.display = 'none';
         }
 
         // 5. Geolocation & Timers
@@ -506,20 +560,11 @@
             }, () => {}, { enableHighAccuracy: true });
         }
 
-        // Live Clock
         setInterval(() => {
             const now = new Date();
             document.getElementById('timeVal').textContent = now.toLocaleTimeString('en-US', { hour12: true });
             document.getElementById('dateVal').textContent = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }, 1000);
-
-        // Auto-Refresh Map Image Every 5 Minutes
-        setInterval(() => {
-            const mapFrame = document.getElementById('mapFrame');
-            if (mapFrame) {
-                mapFrame.src = "https://www.timeanddate.com/scripts/sunmap.php?ts=" + new Date().getTime();
-            }
-        }, 300000);
 
         window.addEventListener('load', () => {
             renderDynamicEvents(); 

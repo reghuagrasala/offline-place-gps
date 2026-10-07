@@ -1,4 +1,4 @@
-const CACHE_NAME = 'offline-place-gps-v3';
+const CACHE_NAME = 'offline-place-gps-v4';
 const STATIC_ASSETS = [
     './',
     './index.html',
