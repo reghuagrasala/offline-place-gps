@@ -78,8 +78,10 @@
         .card {
             background: var(--silver-surface); border: 1px solid var(--silver-border);
             box-shadow: inset 0 1px 1px var(--silver-border-specular), 0 4px 12px rgba(0, 0, 0, 0.5);
-            border-radius: 14px; padding: 12px 14px;
+            border-radius: 14px; padding: 12px 14px; cursor: pointer; transition: transform 0.1s;
         }
+        
+        .card:active { transform: scale(0.97); }
 
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
@@ -139,9 +141,65 @@
         }
         .event-date { color: var(--accent-cyan); font-size: 13px; font-weight: 700; white-space: nowrap; margin-right: 8px; }
         .event-name { color: var(--text-silver-bright); font-size: 13px; font-weight: 500; flex-grow: 1; text-align: right; }
+
+        /* IN-APP BROWSER OVERLAY */
+        #inAppBrowserOverlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
+            background: var(--bg-base); z-index: 99999; flex-direction: column;
+        }
+        .browser-header {
+            height: calc(env(safe-area-inset-top) + 60px); padding: env(safe-area-inset-top) 15px 0 15px; 
+            background: #1e293b; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid #334155; flex-shrink: 0;
+        }
+        .browser-back-btn {
+            background: var(--accent-cyan); color: #fff; border: none; padding: 8px 16px; 
+            border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer;
+        }
+        .browser-title {
+            font-weight: bold; color: #fff; font-size: 15px; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; max-width: 65%; text-align: right;
+        }
+        #inAppIframe { flex-grow: 1; width: 100%; border: none; background: #ffffff; }
+
+        /* CENTERED METRIC DESCRIPTION MODAL */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            z-index: 100000; justify-content: center; align-items: center; padding: 20px;
+        }
+        .modal-box {
+            background: #1e293b; border: 1px solid var(--silver-border); border-radius: 20px;
+            padding: 24px; width: 100%; max-width: 350px; box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .modal-title { font-size: 18px; font-weight: 800; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.5px;}
+        .modal-text { font-size: 15px; color: #e2e8f0; line-height: 1.5; font-weight: 500; }
+        .modal-close-btn {
+            align-self: flex-end; background: rgba(255,255,255,0.1); color: white; border: 1px solid var(--silver-border);
+            padding: 8px 20px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 10px;
+        }
     </style>
 </head>
 <body>
+
+    <!-- METRIC DESCRIPTION MODAL (Closes if outer area is clicked) -->
+    <div id="descModalOverlay" class="modal-overlay" onclick="closeDescModal()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-title" id="descModalTitle">--</div>
+            <div class="modal-text" id="descModalText">--</div>
+            <button class="modal-close-btn" onclick="closeDescModal()">Close</button>
+        </div>
+    </div>
+
+    <!-- IN-APP BROWSER -->
+    <div id="inAppBrowserOverlay">
+        <div class="browser-header">
+            <button class="browser-back-btn" onclick="closeInAppBrowser()">← Back</button>
+            <span class="browser-title" id="inAppBrowserTitle">Loading...</span>
+        </div>
+        <iframe id="inAppIframe" sandbox="allow-same-origin allow-scripts allow-forms" src=""></iframe>
+    </div>
 
     <div class="app-container">
         <div class="header-banner">
@@ -149,30 +207,30 @@
             Your Place Data
         </div>
 
-        <div class="card full-width">
+        <div class="card full-width" onclick="showDesc('Digipin')">
             <div class="label">Digipin</div>
-            <div class="val" id="digipinVal" style="letter-spacing: 1.5px;">M C 2 5 M 5 5 4 8 M</div>
+            <div class="val" id="digipinVal" style="letter-spacing: 1.5px;">-- -- -- -- --</div>
         </div>
 
         <div class="grid-2">
-            <div class="card">
+            <div class="card" onclick="showDesc('Longitude')">
                 <div class="label">Longitude</div>
-                <div class="val" id="lonVal">76.224575° E</div>
+                <div class="val" id="lonVal">--</div>
             </div>
-            <div class="card">
+            <div class="card" onclick="showDesc('Latitude')">
                 <div class="label">Latitude</div>
-                <div class="val" id="latVal">10.545894° N</div>
+                <div class="val" id="latVal">--</div>
             </div>
         </div>
 
         <div class="grid-2">
-            <div class="card">
+            <div class="card" onclick="showDesc('Elevation')">
                 <div class="label">Elevation</div>
-                <div class="val" id="altVal">21 m</div>
+                <div class="val" id="altVal">-- m</div>
             </div>
-            <div class="card heading-cell" id="headingBtn" onclick="requestCompassPermission()">
+            <div class="card heading-cell" id="headingBtn" onclick="requestCompassPermission(); showDesc('Heading');">
                 <div class="label">Heading</div>
-                <div class="val" id="headingVal">307°</div>
+                <div class="val" id="headingVal">--°</div>
                 <svg class="compass-arrow" id="compassArrow" viewBox="0 0 24 24" fill="none">
                     <polygon points="12,3 17,21 12,16 7,21" fill="var(--bright-green)" stroke="var(--bright-green)" stroke-width="1.2"/>
                     <text x="12" y="3" font-size="5" fill="var(--bright-green)" text-anchor="middle" font-weight="900" font-family="sans-serif">N</text>
@@ -181,22 +239,22 @@
         </div>
 
         <div class="grid-2">
-            <div class="card">
+            <div class="card" onclick="showDesc('Accuracy')">
                 <div class="label">Accuracy</div>
-                <div class="val" id="accVal">± 6 m</div>
+                <div class="val" id="accVal">-- m</div>
             </div>
-            <div class="card">
+            <div class="card" onclick="showDesc('Date')">
                 <div class="label">Date</div>
-                <div class="val" id="dateVal">07 Oct 2026</div>
+                <div class="val" id="dateVal">--</div>
             </div>
         </div>
 
         <div class="grid-2">
-            <div class="card">
+            <div class="card" onclick="showDesc('Speed')">
                 <div class="label">Speed</div>
                 <div class="val" id="speedVal">0.0 Km/h</div>
             </div>
-            <div class="card">
+            <div class="card" onclick="showDesc('Time')">
                 <div class="label">Time</div>
                 <div class="val" id="timeVal">--:--:--</div>
             </div>
@@ -209,7 +267,7 @@
 
         <div class="section-label">Sky Data (3x3 Grid)</div>
 
-        <div class="card full-width hero-moon-box">
+        <div class="card full-width hero-moon-box" onclick="showDesc('Moon Phase')">
             <div class="moon-svg-container" id="mainMoonSvg"></div>
             <div class="hero-moon-details">
                 <div class="hero-moon-name" id="heroPhaseName">--</div>
@@ -219,44 +277,44 @@
         </div>
 
         <div class="grid-3">
-            <div class="card">
+            <div class="card" onclick="showDesc('Sunrise')">
                 <div class="label">Sunrise <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M12 4v4m-8.5 4h4m13 0h4M4.9 7.1l2.8 2.8m9.9-2.8-2.8 2.8M2 20h20M12 12a4 4 0 0 0-4 4h8a4 4 0 0 0-4-4z"/></svg></div>
                 <div class="val" id="gridSunrise">--:--</div>
             </div>
-            <div class="card">
+            <div class="card" onclick="showDesc('Sunset')">
                 <div class="label">Sunset <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><path d="M12 20v-4m-8.5-4h4m13 0h4M4.9 16.9l2.8-2.8m9.9 2.8-2.8-2.8M2 4h20M12 12a4 4 0 0 1-4-4h8a4 4 0 0 1-4 4z"/></svg></div>
                 <div class="val" id="gridSunset">--:--</div>
             </div>
-            <div class="card">
+            <div class="card" onclick="showDesc('Moonrise')">
                 <div class="label">Moonrise <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M2 20h20M12 15a4 4 0 0 0-4 4h8a4 4 0 0 0-4-4zM21 7.5a6 6 0 1 1-6-6 6 6 0 0 0 6 6z"/></svg></div>
                 <div class="val" id="gridMoonrise">--:--</div>
             </div>
 
-            <div class="card">
+            <div class="card" onclick="showDesc('Moonset')">
                 <div class="label">Moonset <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2"><path d="M2 4h20M12 9a4 4 0 0 1-4-4h8a4 4 0 0 1-4 4zM21 16.5a6 6 0 1 0-6 6 6 6 0 0 1 6-6z"/></svg></div>
                 <div class="val" id="gridMoonset">--:--</div>
             </div>
-            <div class="card">
+            <div class="card" onclick="showDesc('Day Length')">
                 <div class="label">Day Length <svg class="card-icon" viewBox="0 0 24 24" fill="var(--gold)"><circle cx="12" cy="12" r="5"/><path d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.5-7.5-1.4 1.4M6.3 17.7l-1.4 1.4m13.6 0-1.4-1.4M6.3 6.3 4.9 4.9" stroke="var(--gold)" stroke-width="2"/></svg></div>
                 <div class="val" id="gridDayLength">--</div>
             </div>
-            <div class="card">
+            <div class="card" onclick="showDesc('Moon Phase')">
                 <div class="label">Moon Phase <div class="card-icon" id="gridPhaseSvg"></div></div>
                 <div class="val" id="gridPhaseText" style="color: var(--gold); font-size: 12.5px;">--</div>
             </div>
 
-            <div class="card">
+            <div class="card" onclick="showDesc('Solar Noon')">
                 <div class="label">Solar Noon <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3m10-10h-3M5 12H2m14.9-7.1-2.1 2.1M7.2 16.8l-2.1 2.1m14-0-2.1-2.1M7.2 7.2 5.1 5.1"/></svg></div>
                 <div class="val" id="gridSolarNoon">--:--</div>
             </div>
-            <div class="card">
+            <div class="card" onclick="showDesc('Sun Altitude')">
                 <div class="label">Sun Altitude <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M2 20h20M12 20V4m-5 5 5-5 5 5"/></svg></div>
                 <div>
                     <div class="val" id="gridAltitude" style="color: var(--gold);">--°</div>
                     <div class="sub-val" id="gridAzimuth">--° az</div>
                 </div>
             </div>
-            <div class="card">
+            <div class="card" onclick="showDesc('Moon Dist')">
                 <div class="label">Moon Dist <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="2"><circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg></div>
                 <div>
                     <div class="val" id="gridMoonDist" style="color: var(--gold);">-- km</div>
@@ -302,10 +360,12 @@
             const scene = world.scene();
             scene.children = scene.children.filter(c => !(c instanceof THREE.Light));
 
-            const ambientLight = new THREE.AmbientLight(0x4a5a7a, 0.65); 
+            // Brightened Ambient Light for better mobile night-side visibility
+            const ambientLight = new THREE.AmbientLight(0x6b82ad, 0.95); 
             scene.add(ambientLight);
 
-            const sunLight = new THREE.DirectionalLight(0xfff5e6, 3.0);
+            // Sun Light
+            const sunLight = new THREE.DirectionalLight(0xfff5e6, 3.5);
             scene.add(sunLight);
 
             window.updateSunPosition = function() {
@@ -337,6 +397,60 @@
         window.currentLon = 76.224575;
         let smoothedHeading = 0;
         const EMA_ALPHA = 0.18; 
+
+        // Metric Descriptions Dictionary
+        const metricDescriptions = {
+            "Digipin": "DIGIPIN is a 10-character alphanumeric national addressing grid code serving as a highly accurate digital location identifier.",
+            "Longitude": "The angular distance of your current location east or west of the prime meridian at Greenwich.",
+            "Latitude": "The angular distance of your current location north or south of the earth's equator.",
+            "Elevation": "The approximate height of your current location above mean sea level.",
+            "Heading": "The live compass direction in which the top of your device is currently pointing.",
+            "Accuracy": "The margin of error for the current GPS coordinates retrieved from your device hardware.",
+            "Date": "The current local date.",
+            "Speed": "The current rate of movement calculated by the GPS receiver.",
+            "Time": "The current local time.",
+            "Sunrise": "The time when the upper edge of the sun appears over the eastern horizon.",
+            "Sunset": "The time when the sun disappears below the western horizon.",
+            "Moonrise": "The time when the moon appears above the horizon.",
+            "Moonset": "The time when the moon disappears below the horizon.",
+            "Day Length": "The total duration of daylight from today's sunrise to sunset.",
+            "Moon Phase": "The shape of the directly sunlit portion of the Moon as viewed from your location.",
+            "Solar Noon": "The exact time when the Sun transits the celestial meridian, reaching its highest point in the sky for the day.",
+            "Sun Altitude": "Altitude is the angle of the Sun above the horizon. Azimuth is the compass direction of the Sun.",
+            "Moon Dist": "The current approximate distance between the Earth and the Moon, calculated based on the anomalistic lunar cycle."
+        };
+
+        function showDesc(title) {
+            document.getElementById('descModalTitle').textContent = title;
+            document.getElementById('descModalText').textContent = metricDescriptions[title] || "No description available.";
+            document.getElementById('descModalOverlay').style.display = 'flex';
+        }
+
+        function closeDescModal() {
+            document.getElementById('descModalOverlay').style.display = 'none';
+        }
+
+        // Dynamic 10-character Base16 Geohash logic for Digipin format
+        function updateDigipin(lat, lon) {
+            if(!lat || !lon) return;
+            const charset = "23456789CFGHJMPR";
+            let minLat = -90, maxLat = 90, minLon = -180, maxLon = 180;
+            let hash = "";
+            for(let i=0; i<10; i++) {
+                let ch = 0;
+                for(let b=0; b<4; b++) {
+                    if((i*4 + b) % 2 === 0) {
+                        let mid = (minLon + maxLon) / 2;
+                        if(lon > mid) { ch |= (1 << (3-b)); minLon = mid; } else { maxLon = mid; }
+                    } else {
+                        let mid = (minLat + maxLat) / 2;
+                        if(lat > mid) { ch |= (1 << (3-b)); minLat = mid; } else { maxLat = mid; }
+                    }
+                }
+                hash += charset[ch];
+            }
+            document.getElementById('digipinVal').textContent = hash.split('').join(' ');
+        }
 
         function getDynamicMoonSVG(phaseDays) {
             const p = phaseDays / 29.53058867; 
@@ -528,6 +642,9 @@
                 document.getElementById('latVal').textContent = `${window.currentLat.toFixed(6)}° ${window.currentLat >= 0 ? 'N' : 'S'}`;
                 document.getElementById('lonVal').textContent = `${window.currentLon.toFixed(6)}° ${window.currentLon >= 0 ? 'E' : 'W'}`;
                 
+                // Triggers Digipin Dynamic generation on move
+                updateDigipin(window.currentLat, window.currentLon);
+
                 const validAlt = (pos.coords.altitude !== null && !isNaN(pos.coords.altitude) && pos.coords.altitude !== 0) 
                     ? Math.round(pos.coords.altitude) : 21; 
                 document.getElementById('altVal').textContent = `${validAlt} m`;
