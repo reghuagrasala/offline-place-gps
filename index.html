@@ -413,12 +413,15 @@
             .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
             .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
             .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
+            .showAtmosphere(true)
+            .atmosphereColor('#3a86ff')
+            .atmosphereAltitude(0.15)
             .width(container.clientWidth)
             .height(container.clientHeight);
 
-        // Initial view centered on GPS coordinates
+        // Zoomed in closer (altitude 1.3) to fill the box space better
         window.resetGlobeView = () => {
-            world.pointOfView({ lat: window.currentLat || 10.545894, lng: window.currentLon || 76.224575, altitude: 2.2 }, 1000);
+            world.pointOfView({ lat: window.currentLat || 10.545894, lng: window.currentLon || 76.224575, altitude: 1.3 }, 1000);
         };
         resetGlobeView();
 
@@ -427,34 +430,42 @@
             resetGlobeView();
         });
 
-        // True Day/Night Lighting Setup (Low ambient to ensure shadows are dark)
-        const scene = world.scene();
-        const ambientLight = new THREE.AmbientLight(0x111111, 0.15); 
-        scene.add(ambientLight);
+        // Delay slightly to let Globe.gl inject its defaults, then strip and replace them for stark day/night contrast
+        setTimeout(() => {
+            const scene = world.scene();
+            
+            // Remove the default lights that wash out the day/night shadows
+            scene.children = scene.children.filter(c => !(c instanceof THREE.Light));
 
-        const sunLight = new THREE.DirectionalLight(0xffffff, 2.0);
-        scene.add(sunLight);
+            // Extremely dim blue ambient light for the night side
+            const ambientLight = new THREE.AmbientLight(0x0a1128, 0.25); 
+            scene.add(ambientLight);
 
-        function updateSunPosition() {
-            const now = new Date();
-            const hours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-            const sunLng = (12 - hours) * 15; 
-            const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-            const sunLat = -23.44 * Math.cos((360 / 365 * (dayOfYear + 10)) * (Math.PI / 180));
+            // Intense white directional light acting as the Sun
+            const sunLight = new THREE.DirectionalLight(0xffffff, 3.5);
+            scene.add(sunLight);
 
-            const distance = 400;
-            const phi = (90 - sunLat) * (Math.PI / 180);
-            const theta = (sunLng + 180) * (Math.PI / 180);
+            function updateSunPosition() {
+                const now = new Date();
+                const hours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+                
+                let sunLng = (12 - hours) * 15; 
+                if (sunLng > 180) sunLng -= 360;
+                if (sunLng < -180) sunLng += 360;
 
-            sunLight.position.x = distance * Math.sin(phi) * Math.cos(theta);
-            sunLight.position.y = distance * Math.cos(phi);
-            sunLight.position.z = distance * Math.sin(phi) * Math.sin(theta);
-        }
+                const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+                const sunLat = -23.44 * Math.cos((360 / 365 * (dayOfYear + 10)) * (Math.PI / 180));
 
-        updateSunPosition();
-        setInterval(updateSunPosition, 10000);
+                // Native spherical coordinate translation guarantees precise shadow casting
+                const sunCoords = world.getCoords(sunLat, sunLng, 100);
+                sunLight.position.set(sunCoords.x, sunCoords.y, sunCoords.z);
+            }
 
-        // Robust Auto-Fit Observer for resizing and device rotation
+            updateSunPosition();
+            setInterval(updateSunPosition, 60000); // Shift sun every minute
+        }, 300);
+
+        // Robust Auto-Fit Observer
         const resizeObserver = new ResizeObserver(entries => {
             for (let entry of entries) {
                 world.width(entry.contentRect.width);
