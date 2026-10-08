@@ -115,7 +115,16 @@
             background: #020617; border: 1px solid var(--silver-border); margin-bottom: 12px; position: relative;
         }
 
-        #globeViz { width: 100%; height: 100%; display: block; }
+        /* 
+         * ARTIFICIAL BRIGHTNESS BOOST 
+         * Greatly enhances the stars and the globe without needing to raise device brightness
+         */
+        #globeViz { 
+            width: 100%; 
+            height: 100%; 
+            display: block; 
+            filter: brightness(1.45) contrast(1.15) saturate(1.2);
+        }
 
         .globe-reset-btn {
             position: absolute; bottom: 10px; right: 10px; background: rgba(15, 23, 42, 0.85);
@@ -362,12 +371,12 @@
             const scene = world.scene();
             scene.children = scene.children.filter(c => !(c instanceof THREE.Light));
 
-            // Brightened Ambient Light for better mobile night-side visibility
-            const ambientLight = new THREE.AmbientLight(0x6b82ad, 0.95); 
+            // EXTREMELY BRIGHT AMBIENT LIGHT: Illuminates the dark side significantly without requiring high hardware screen brightness
+            const ambientLight = new THREE.AmbientLight(0xaaccff, 2.2); 
             scene.add(ambientLight);
 
-            // Sun Light
-            const sunLight = new THREE.DirectionalLight(0xfff5e6, 3.5);
+            // Strong, high-contrast Sun Light
+            const sunLight = new THREE.DirectionalLight(0xfff8f0, 4.5);
             scene.add(sunLight);
 
             window.updateSunPosition = function() {
@@ -424,7 +433,7 @@
           return pin;
         }
 
-        // Live updater for UI layout
+        // Formats correctly to 'M C 2 5 M 5 5 4 8 M' format as requested
         function updateDigipin(lat, lon) {
             if(!lat || !lon) return;
             const pin = getDigiPin(lat, lon);
@@ -435,7 +444,6 @@
             }
         }
 
-        // Metric Descriptions Dictionary
         const metricDescriptions = {
             "Digipin": "DIGIPIN is a 10-character alphanumeric national addressing grid code serving as a highly accurate digital location identifier.",
             "Longitude": "The angular distance of your current location east or west of the prime meridian at Greenwich.",
@@ -673,7 +681,6 @@
                 document.getElementById('latVal').textContent = `${window.currentLat.toFixed(6)}° ${window.currentLat >= 0 ? 'N' : 'S'}`;
                 document.getElementById('lonVal').textContent = `${window.currentLon.toFixed(6)}° ${window.currentLon >= 0 ? 'E' : 'W'}`;
                 
-                // Triggers highly-sensitive live recalculation of the official India Post Digipin
                 updateDigipin(window.currentLat, window.currentLon);
 
                 const validAlt = (pos.coords.altitude !== null && !isNaN(pos.coords.altitude) && pos.coords.altitude !== 0) 
