@@ -448,11 +448,11 @@
             "Digipin": "DIGIPIN is a 10-character alphanumeric national addressing grid code serving as a highly accurate digital location identifier.",
             "Longitude": "The angular distance of your current location east or west of the prime meridian at Greenwich.",
             "Latitude": "The angular distance of your current location north or south of the earth's equator.",
-            "Elevation": "The approximate height of your current location above mean sea level.",
+            "Elevation": "The device-reported GPS altitude in metres relative to the nominal sea-level reference. Some devices do not provide altitude; in that case the app displays Unavailable rather than inventing a value.",
             "Heading": "The live compass direction in which the top of your device is currently pointing.",
             "Accuracy": "The margin of error for the current GPS coordinates retrieved from your device hardware.",
             "Date": "The current local date.",
-            "Speed": "The current rate of movement calculated by the GPS receiver.",
+            "Speed": "The current GPS-reported speed, with a position-difference fallback when the browser omits speed. Readings below 0.5 km/h are treated as stationary to suppress GPS jitter; missing readings reset to 0.0 rather than leaving an old value.",
             "Time": "The current local time.",
             "Sunrise": "The time when the upper edge of the sun appears over the eastern horizon.",
             "Sunset": "The time when the sun disappears below the western horizon.",
@@ -674,21 +674,68 @@
             });
         }
 
+        // Keep the previous GPS sample only for browsers that do not report speed.
+        let previousGpsSample = null;
+        const SPEED_ZERO_THRESHOLD_KMH = 0.5;
+
+        function updateSpeed(coords, timestamp) {
+            let speedKmh = null;
+            if (Number.isFinite(coords.speed) && coords.speed >= 0) {
+                speedKmh = coords.speed * 3.6;
+            } else if (previousGpsSample) {
+                const elapsedSeconds = (timestamp - previousGpsSample.timestamp) / 1000;
+                if (elapsedSeconds > 0 && elapsedSeconds <= 30) {
+                    const toRad = Math.PI / 180;
+                    const dLat = (coords.latitude - previousGpsSample.lat) * toRad;
+                    const dLon = (coords.longitude - previousGpsSample.lon) * toRad;
+                    const a = Math.sin(dLat / 2) ** 2 +
+                        Math.cos(previousGpsSample.lat * toRad) * Math.cos(coords.latitude * toRad) *
+                        Math.sin(dLon / 2) ** 2;
+                    const distanceM = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+                    const noiseFloorM = Math.max(3, (Number.isFinite(coords.accuracy) ? coords.accuracy : 0) * 0.25);
+                    speedKmh = distanceM <= noiseFloorM ? 0 : (distanceM / elapsedSeconds) * 3.6;
+                }
+            }
+
+            // Always write the result: never leave a stale speed on screen.
+            if (!Number.isFinite(speedKmh) || speedKmh < SPEED_ZERO_THRESHOLD_KMH) speedKmh = 0;
+            document.getElementById('speedVal').textContent = `${speedKmh.toFixed(1)} Km/h`;
+
+            previousGpsSample = {
+                lat: coords.latitude,
+                lon: coords.longitude,
+                timestamp
+            };
+        }
+
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition((pos) => {
-                window.currentLat = pos.coords.latitude; 
-                window.currentLon = pos.coords.longitude;
+                const coords = pos.coords;
+                window.currentLat = coords.latitude;
+                window.currentLon = coords.longitude;
                 document.getElementById('latVal').textContent = `${window.currentLat.toFixed(6)}° ${window.currentLat >= 0 ? 'N' : 'S'}`;
                 document.getElementById('lonVal').textContent = `${window.currentLon.toFixed(6)}° ${window.currentLon >= 0 ? 'E' : 'W'}`;
-                
+
                 updateDigipin(window.currentLat, window.currentLon);
 
-                const validAlt = (pos.coords.altitude !== null && !isNaN(pos.coords.altitude) && pos.coords.altitude !== 0) 
-                    ? Math.round(pos.coords.altitude) : 21; 
-                document.getElementById('altVal').textContent = `${validAlt} m`;
-                if (pos.coords.accuracy) document.getElementById('accVal').textContent = `± ${Math.round(pos.coords.accuracy)} m`;
-                if (pos.coords.speed) document.getElementById('speedVal').textContent = `${(pos.coords.speed * 3.6).toFixed(1)} Km/h`;
-            }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+                // Never invent elevation when the device cannot provide it.
+                document.getElementById('altVal').textContent =
+                    Number.isFinite(coords.altitude) ? `${Math.round(coords.altitude)} m` : 'Unavailable';
+                document.getElementById('accVal').textContent =
+                    Number.isFinite(coords.accuracy) ? `± ${Math.round(coords.accuracy)} m` : 'Unavailable';
+                updateSpeed(coords, Number.isFinite(pos.timestamp) ? pos.timestamp : Date.now());
+            }, (error) => {
+                // A failed GPS update must not leave an old movement speed displayed.
+                document.getElementById('speedVal').textContent = '0.0 Km/h';
+                console.warn('Geolocation update failed:', error.message);
+            }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+        } else {
+            document.getElementById('speedVal').textContent = '0.0 Km/h';
+            document.getElementById('latVal').textContent = 'Unavailable';
+            document.getElementById('lonVal').textContent = 'Unavailable';
+            document.getElementById('altVal').textContent = 'Unavailable';
+            document.getElementById('accVal').textContent = 'Unavailable';
+            document.getElementById('digipinVal').textContent = 'Unavailable';
         }
 
         setInterval(() => {
