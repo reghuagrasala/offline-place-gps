@@ -674,38 +674,71 @@
             });
         }
 
-        // Keep the previous GPS sample only for browsers that do not report speed.
-        let previousGpsSample = null;
-        const SPEED_ZERO_THRESHOLD_KMH = 0.5;
+        // Estimate speed over a multi-second GPS window. Single fixes can report
+        // stale or wildly inaccurate speed values, so do not trust them alone.
+        const gpsSpeedSamples = [];
+        const SPEED_ZERO_THRESHOLD_KMH = 0.7;
+        const SPEED_WINDOW_MS = 7000;
+
+        function distanceBetweenMeters(a, b) {
+            const toRad = Math.PI / 180;
+            const dLat = (b.lat - a.lat) * toRad;
+            const dLon = (b.lon - a.lon) * toRad;
+            const lat1 = a.lat * toRad;
+            const lat2 = b.lat * toRad;
+            const h = Math.sin(dLat / 2) ** 2 +
+                Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+            return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
+        }
 
         function updateSpeed(coords, timestamp) {
-            let speedKmh = null;
-            if (Number.isFinite(coords.speed) && coords.speed >= 0) {
-                speedKmh = coords.speed * 3.6;
-            } else if (previousGpsSample) {
-                const elapsedSeconds = (timestamp - previousGpsSample.timestamp) / 1000;
-                if (elapsedSeconds > 0 && elapsedSeconds <= 30) {
-                    const toRad = Math.PI / 180;
-                    const dLat = (coords.latitude - previousGpsSample.lat) * toRad;
-                    const dLon = (coords.longitude - previousGpsSample.lon) * toRad;
-                    const a = Math.sin(dLat / 2) ** 2 +
-                        Math.cos(previousGpsSample.lat * toRad) * Math.cos(coords.latitude * toRad) *
-                        Math.sin(dLon / 2) ** 2;
-                    const distanceM = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
-                    const noiseFloorM = Math.max(3, (Number.isFinite(coords.accuracy) ? coords.accuracy : 0) * 0.25);
-                    speedKmh = distanceM <= noiseFloorM ? 0 : (distanceM / elapsedSeconds) * 3.6;
+            const sample = {
+                lat: coords.latitude,
+                lon: coords.longitude,
+                timestamp,
+                accuracy: Number.isFinite(coords.accuracy) ? coords.accuracy : 10,
+                reportedSpeed: Number.isFinite(coords.speed) && coords.speed >= 0
+                    ? coords.speed * 3.6 : null
+            };
+
+            // Ignore duplicate/out-of-order timestamps and keep a short rolling window.
+            const last = gpsSpeedSamples[gpsSpeedSamples.length - 1];
+            if (!last || sample.timestamp > last.timestamp) gpsSpeedSamples.push(sample);
+            while (gpsSpeedSamples.length > 2 &&
+                   sample.timestamp - gpsSpeedSamples[0].timestamp > SPEED_WINDOW_MS) {
+                gpsSpeedSamples.shift();
+            }
+
+            let speedKmh = 0;
+            if (gpsSpeedSamples.length >= 2) {
+                // Use the oldest point at least 4 seconds old, when available, to
+                // average out GPS jitter instead of amplifying it into speed spikes.
+                const anchor = gpsSpeedSamples.find(p => sample.timestamp - p.timestamp >= 4000)
+                    || gpsSpeedSamples[0];
+                const elapsedSeconds = (sample.timestamp - anchor.timestamp) / 1000;
+                const distanceM = distanceBetweenMeters(anchor, sample);
+                const accuracyFloor = Math.min(10, Math.max(5, sample.accuracy * 0.6));
+
+                if (elapsedSeconds >= 2 && distanceM > accuracyFloor) {
+                    const positionSpeedKmh = (distanceM / elapsedSeconds) * 3.6;
+                    // Prefer the window-based position speed. The device speed can
+                    // be used only when it agrees reasonably with the position trend.
+                    if (sample.reportedSpeed !== null &&
+                        sample.reportedSpeed >= 1 &&
+                        positionSpeedKmh >= 1 &&
+                        sample.reportedSpeed <= positionSpeedKmh * 2.2 &&
+                        sample.reportedSpeed >= positionSpeedKmh * 0.35) {
+                        speedKmh = (positionSpeedKmh * 0.7) + (sample.reportedSpeed * 0.3);
+                    } else {
+                        speedKmh = positionSpeedKmh;
+                    }
                 }
             }
 
-            // Always write the result: never leave a stale speed on screen.
+            // If location fixes stop changing meaningfully, force zero even if
+            // the device keeps repeating a non-zero speed reading.
             if (!Number.isFinite(speedKmh) || speedKmh < SPEED_ZERO_THRESHOLD_KMH) speedKmh = 0;
             document.getElementById('speedVal').textContent = `${speedKmh.toFixed(1)} Km/h`;
-
-            previousGpsSample = {
-                lat: coords.latitude,
-                lon: coords.longitude,
-                timestamp
-            };
         }
 
         if ("geolocation" in navigator) {
