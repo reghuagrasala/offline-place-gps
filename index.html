@@ -463,7 +463,7 @@
             "Moon Phase": "The shape of the directly sunlit portion of the Moon as viewed from your location.",
             "Solar Noon": "The exact time when the Sun transits the celestial meridian, reaching its highest point in the sky for the day.",
             "Sun Altitude": "Altitude is the angle of the Sun above the horizon. Azimuth is the compass direction of the Sun.",
-            "Moon Dist": "The current approximate distance between the Earth and the Moon, calculated based on the anomalistic lunar cycle."
+            "Moon Dist": "Geocentric Earth–Moon distance calculated by Astronomy Engine; small differences from other ephemerides can arise from model and epoch conventions."
         };
 
         function showDesc(title) {
@@ -543,12 +543,15 @@
             const riseSet = (body, direction) => {
                 try {
                     const event = Astronomy.SearchRiseSet(body, observer, direction, dayStart, 1);
-                    return event && event.date ? event.date : null;
+                    const t = event && event.date;
+                    // A 24-hour search can cross midnight; never label tomorrow's event as today's.
+                    return t && t.getFullYear() === dayStart.getFullYear() &&
+                        t.getMonth() === dayStart.getMonth() && t.getDate() === dayStart.getDate() ? t : null;
                 } catch (e) { return null; }
             };
             const formatTime = (value) => value
                 ? value.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: true})
-                : 'No event';
+                : 'No event today';
             const sunrise = riseSet('Sun', +1);
             const sunset = riseSet('Sun', -1);
             const moonrise = riseSet('Moon', +1);
