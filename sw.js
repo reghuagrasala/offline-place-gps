@@ -5,6 +5,7 @@ const CACHE_NAME = 'telemetry-offline-v9';
 const CORE_ASSETS = [
     './',
     './index.html',
+                    './astronomy.browser.min.js',
     './manifest.json'
 ];
 
