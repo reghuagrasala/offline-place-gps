@@ -1,4 +1,4 @@
-const CACHE_NAME = 'telemetry-offline-v13';
+const CACHE_NAME = 'telemetry-offline-v14';
 
 // Only core files required for startup are explicitly pre-cached. 
 // Missing PNG icon files will NOT crash the installation anymore.
