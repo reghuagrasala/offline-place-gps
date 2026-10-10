@@ -381,14 +381,14 @@
 
             window.updateSunPosition = function() {
                 const now = new Date();
-                const hours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-                let sunLng = (12 - hours) * 15; 
-                if (sunLng > 180) sunLng -= 360;
-                if (sunLng < -180) sunLng += 360;
-                const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-                const sunLat = -23.44 * Math.cos((360 / 365 * (dayOfYear + 10)) * (Math.PI / 180));
-
-                const sunCoords = world.getCoords(sunLat, sunLng, 100);
+                // The globe's subsolar point uses the same astronomy engine as the sky cards.
+                if (!window.Astronomy) return;
+                const observer = new Astronomy.Observer(0, 0, 0);
+                const sun = Astronomy.Equator('Sun', now, observer, true, true);
+                const gst = Astronomy.SiderealTime(now);
+                let sunLng = (sun.ra - gst) * 15;
+                sunLng = ((sunLng + 540) % 360) - 180;
+                const sunCoords = world.getCoords(sun.dec, sunLng, 100);
                 sunLight.position.set(sunCoords.x, sunCoords.y, sunCoords.z);
             };
             window.updateSunPosition();
