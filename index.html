@@ -554,9 +554,9 @@
             const moonrise = riseSet('Moon', +1);
             const moonset = riseSet('Moon', -1);
             const equSun = Astronomy.Equator('Sun', date, observer, true, true);
-            const sunHorizon = Astronomy.Horizon(date, observer, equSun, 'normal');
+            const sunHorizon = Astronomy.Horizon(date, observer, equSun.ra, equSun.dec, 'normal');
             const phaseAngle = ((Astronomy.MoonPhase(date) % 360) + 360) % 360;
-            const illumination = (50 * (1 - Math.cos(phaseAngle * rad))).toFixed(0);
+            const illumination = Math.round(Astronomy.Illumination('Moon', date).phase_fraction * 100);
             const phaseDays = phaseAngle / 360 * 29.530588853;
             let phaseName;
             if (phaseAngle < 22.5 || phaseAngle >= 337.5) phaseName = 'New Moon';
@@ -572,7 +572,7 @@
             let solarNoonDate = null;
             try {
                 const transit = Astronomy.SearchHourAngle('Sun', observer, 0, dayStart, 1);
-                solarNoonDate = transit && transit.date ? transit.date : null;
+                solarNoonDate = transit && transit.time && transit.time.date ? transit.time.date : null;
             } catch (e) { solarNoonDate = sunrise && sunset ? new Date((sunrise.getTime() + sunset.getTime()) / 2) : null; }
             const dayHours = sunrise && sunset ? Math.max(0, (sunset - sunrise) / 3600000) : null;
             const formatHours = (h) => h == null ? 'Unavailable' : (Math.floor(h) + 'h ' + Math.round((h % 1) * 60) + 'm');
