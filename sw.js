@@ -1,10 +1,11 @@
-const CACHE_NAME = 'telemetry-offline-v9';
+const CACHE_NAME = 'telemetry-offline-v14';
 
 // Only core files required for startup are explicitly pre-cached. 
 // Missing PNG icon files will NOT crash the installation anymore.
 const CORE_ASSETS = [
     './',
     './index.html',
+                    './astronomy.browser.min.js',
     './manifest.json'
 ];
 
