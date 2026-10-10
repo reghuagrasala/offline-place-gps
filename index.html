@@ -567,8 +567,11 @@
             else if (phaseAngle < 247.5) phaseName = 'Waning Gibbous';
             else if (phaseAngle < 292.5) phaseName = 'Last Quarter';
             else phaseName = 'Waning Crescent';
-            const equMoon = Astronomy.Equator('Moon', date, observer, true, true);
-            const distanceKm = Number.isFinite(equMoon.dist) ? Math.round(equMoon.dist * 149597870.7) : null;
+            // Geocentric Earth–Moon distance: comparable with standard ephemerides.
+            // Topocentric distance (from the observer) can differ by thousands of km.
+            const moonGeo = Astronomy.GeoVector('Moon', date, true);
+            const distanceAu = Math.hypot(moonGeo.x, moonGeo.y, moonGeo.z);
+            const distanceKm = Number.isFinite(distanceAu) ? Math.round(distanceAu * 149597870.7) : null;
             let solarNoonDate = null;
             try {
                 const transit = Astronomy.SearchHourAngle('Sun', observer, 0, dayStart, 1);
