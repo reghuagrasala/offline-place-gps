@@ -557,7 +557,7 @@
             const sunHorizon = Astronomy.Horizon(date, observer, equSun.ra, equSun.dec, 'normal');
             const phaseAngle = ((Astronomy.MoonPhase(date) % 360) + 360) % 360;
             const illumination = Math.round(Astronomy.Illumination('Moon', date).phase_fraction * 100);
-            const phaseDays = phaseAngle / 360 * 29.530588853;
+            const phaseDays = (() => { try { const lastNew = Astronomy.SearchMoonPhase(0, date, -30); return lastNew && lastNew.date ? Math.max(0, (date.getTime() - lastNew.date.getTime()) / 86400000) : phaseAngle / 360 * 29.530588853; } catch (e) { return phaseAngle / 360 * 29.530588853; } })();
             let phaseName;
             if (phaseAngle < 22.5 || phaseAngle >= 337.5) phaseName = 'New Moon';
             else if (phaseAngle < 67.5) phaseName = 'Waxing Crescent';
